@@ -15,7 +15,9 @@ Decisions for the StitchLab desktop app. Product context is in
 - **3D preview:** Three.js
 - **State:** Zustand, with an operation-based document model for undo / redo
 - **Export:** PNG from the renderer, SVG from the document model, PDF via pdf-lib
-- **Packaging:** electron-builder (Windows NSIS installer, macOS DMG)
+- **Packaging:** electron-builder - Windows NSIS installer (`npm run dist:win`),
+  macOS DMG planned. Only `out/` is packed into the asar; renderer
+  dependencies are already bundled by Vite.
 - **Tests:** Vitest (unit), Playwright for Electron (end-to-end)
 - **Quality:** ESLint, Prettier
 
