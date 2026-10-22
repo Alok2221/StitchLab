@@ -1,4 +1,5 @@
-import { createDocument, defaultZoneColors, type DesignDocument } from '../document/model'
+import { remapColorways } from '../document/colorways'
+import { createDocument, type DesignDocument } from '../document/model'
 import { isDirty, useEditor } from '../document/store'
 import { svgToPng } from '../export/raster'
 import { documentToSvg } from '../export/svg'
@@ -28,13 +29,7 @@ export function adoptDocument(doc: DesignDocument): DesignDocument {
   if (!hasTemplate(doc.templateId)) {
     throw new ProjectFormatError(`This project uses an unknown template: ${doc.templateId}`)
   }
-  const template = getTemplate(doc.templateId)
-  const zoneColors = defaultZoneColors(template.zones)
-  for (const zone of template.zones) {
-    const saved = doc.zoneColors[zone.id]
-    if (saved) zoneColors[zone.id] = saved
-  }
-  return { ...doc, zoneColors }
+  return { ...doc, ...remapColorways(doc, getTemplate(doc.templateId).zones) }
 }
 
 async function thumbnailFor(doc: DesignDocument): Promise<Uint8Array | undefined> {

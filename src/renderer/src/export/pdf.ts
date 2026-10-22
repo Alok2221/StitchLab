@@ -50,17 +50,29 @@ function describeLayer(layer: Layer, template: GarmentTemplate): string {
   return `${layer.name} - ${details}; ${transform}`
 }
 
-export interface PdfInput {
-  doc: DesignDocument
-  template: GarmentTemplate
+/** One rendered colorway. */
+export interface PdfSheet {
+  /** Colorway name; omitted when the design has a single colorway. */
+  name: string | null
+  zoneColors: Record<string, string>
   png: Uint8Array
   pngWidth: number
   pngHeight: number
+}
+
+export interface PdfInput {
+  doc: DesignDocument
+  template: GarmentTemplate
+  sheets: PdfSheet[]
   createdAt?: Date
 }
 
-/** A4 sheet with the rendered design followed by a spec: part colors and layers. */
-export async function buildPdf({ doc, template, png, pngWidth, pngHeight, createdAt = new Date() }: PdfInput) {
+/**
+ * A4 spec sheets: one page (or more) per colorway with the render, part colors
+ * and layers. Several colorways get an overview page first.
+ */
+export async function buildPdf({ doc, template, sheets, createdAt = new Date() }: PdfInput) {
+  if (sheets.length === 0) throw new Error('Nothing to export')
   const pdf = await PDFDocument.create()
   pdf.setTitle(`${template.name} - StitchLab`)
   pdf.setCreator('StitchLab')
@@ -68,70 +80,107 @@ export async function buildPdf({ doc, template, png, pngWidth, pngHeight, create
 
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
-  let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT])
-  let y = PAGE_HEIGHT - MARGIN
+  const images = await Promise.all(sheets.map((s) => pdf.embedPng(s.png)))
+  const contentWidth = PAGE_WIDTH - MARGIN * 2
+  const exported = `Exported ${createdAt.toISOString().slice(0, 10)}`
 
-  const write = (target: PDFPage, text: string, x: number, size: number, font: PDFFont, color = TEXT_COLOR, maxWidth?: number) => {
+  let page: PDFPage
+  let y = 0
+  const newPage = () => {
+    page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT])
+    y = PAGE_HEIGHT - MARGIN
+  }
+  const write = (text: string, x: number, size: number, font: PDFFont, color = TEXT_COLOR, maxWidth?: number) => {
     let line = toWinAnsi(text)
     if (maxWidth) {
       while (line.length > 1 && font.widthOfTextAtSize(line, size) > maxWidth) line = `${line.slice(0, -2)}~`
     }
-    target.drawText(line, { x, y, size, font, color })
+    page.drawText(line, { x, y, size, font, color })
   }
   const ensureSpace = (height: number) => {
-    if (y - height >= MARGIN) return
-    page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT])
-    y = PAGE_HEIGHT - MARGIN
+    if (y - height < MARGIN) newPage()
+  }
+  const heading = (title: string) => {
+    y -= 18
+    write(title, MARGIN, 18, bold, TEXT_COLOR, contentWidth)
+    y -= 16
+    write(exported, MARGIN, 10, regular, MUTED_COLOR)
+    y -= 16
+  }
+  const drawFitted = (index: number, x: number, top: number, width: number, height: number) => {
+    const { pngWidth, pngHeight } = sheets[index]
+    const fit = Math.min(width / pngWidth, height / pngHeight)
+    const w = pngWidth * fit
+    const h = pngHeight * fit
+    page.drawImage(images[index], { x: x + (width - w) / 2, y: top - h, width: w, height: h })
+    return h
   }
 
-  y -= 18
-  write(page, `${template.name} - StitchLab design`, MARGIN, 18, bold)
-  y -= 16
-  write(page, `Exported ${createdAt.toISOString().slice(0, 10)}`, MARGIN, 10, regular, MUTED_COLOR)
-  y -= 16
-
-  const image = await pdf.embedPng(png)
-  const contentWidth = PAGE_WIDTH - MARGIN * 2
-  const fit = Math.min(contentWidth / pngWidth, IMAGE_MAX_HEIGHT / pngHeight)
-  const drawWidth = pngWidth * fit
-  const drawHeight = pngHeight * fit
-  y -= drawHeight
-  page.drawImage(image, { x: MARGIN + (contentWidth - drawWidth) / 2, y, width: drawWidth, height: drawHeight })
-  y -= 28
-
-  write(page, 'Part colors', MARGIN, 13, bold)
-  y -= ROW_HEIGHT + 2
-  const columnWidth = contentWidth / 2
-  template.zones.forEach((zone, i) => {
-    const column = i % 2
-    if (column === 0) ensureSpace(ROW_HEIGHT)
-    const x = MARGIN + column * columnWidth
-    const color = doc.zoneColors[zone.id] ?? zone.defaultColor
-    page.drawRectangle({
-      x,
-      y: y - 2,
-      width: SWATCH,
-      height: SWATCH,
-      color: hexToRgb(color),
-      borderColor: BORDER_COLOR,
-      borderWidth: 0.5
+  if (sheets.length > 1) {
+    const columns = sheets.length <= 4 ? 2 : 3
+    const gap = 16
+    const cellWidth = (contentWidth - gap * (columns - 1)) / columns
+    const imageHeight = columns === 2 ? 300 : 190
+    const cellHeight = imageHeight + 34
+    newPage()
+    heading(`${template.name} - ${sheets.length} colorways`)
+    sheets.forEach((sheet, i) => {
+      const column = i % columns
+      if (column === 0) {
+        if (i > 0) y -= cellHeight
+        ensureSpace(cellHeight)
+      }
+      const x = MARGIN + column * (cellWidth + gap)
+      const top = y - 6
+      drawFitted(i, x, top, cellWidth, imageHeight)
+      page.drawRectangle({ x, y: top - imageHeight - 4, width: cellWidth, height: imageHeight + 8, borderColor: BORDER_COLOR, borderWidth: 0.5 })
+      const saved = y
+      y = top - imageHeight - 20
+      write(`${i + 1}. ${sheet.name ?? 'Colorway'}`, x, 10, bold, TEXT_COLOR, cellWidth)
+      y = saved
     })
-    write(page, zone.label, x + SWATCH + 8, 10, regular, TEXT_COLOR, columnWidth - 110)
-    write(page, color.toUpperCase(), x + columnWidth - 80, 10, regular, MUTED_COLOR)
-    if (column === 1 || i === template.zones.length - 1) y -= ROW_HEIGHT
-  })
-
-  y -= 14
-  ensureSpace(ROW_HEIGHT * 2)
-  write(page, 'Layers', MARGIN, 13, bold)
-  y -= ROW_HEIGHT + 2
-  if (doc.layers.length === 0) {
-    write(page, 'No layers - garment colors only.', MARGIN, 10, regular, MUTED_COLOR)
   }
-  ;[...doc.layers].reverse().forEach((layer, i) => {
-    ensureSpace(ROW_HEIGHT)
-    write(page, `${i + 1}. ${describeLayer(layer, template)}`, MARGIN, 10, regular, TEXT_COLOR, contentWidth)
-    y -= ROW_HEIGHT
+
+  sheets.forEach((sheet, index) => {
+    newPage()
+    heading(sheet.name ? `${template.name} - ${sheet.name}` : `${template.name} - StitchLab design`)
+    y -= drawFitted(index, MARGIN, y, contentWidth, IMAGE_MAX_HEIGHT)
+    y -= 28
+
+    write('Part colors', MARGIN, 13, bold)
+    y -= ROW_HEIGHT + 2
+    const columnWidth = contentWidth / 2
+    template.zones.forEach((zone, i) => {
+      const column = i % 2
+      if (column === 0) ensureSpace(ROW_HEIGHT)
+      const x = MARGIN + column * columnWidth
+      const color = sheet.zoneColors[zone.id] ?? zone.defaultColor
+      page.drawRectangle({
+        x,
+        y: y - 2,
+        width: SWATCH,
+        height: SWATCH,
+        color: hexToRgb(color),
+        borderColor: BORDER_COLOR,
+        borderWidth: 0.5
+      })
+      write(zone.label, x + SWATCH + 8, 10, regular, TEXT_COLOR, columnWidth - 110)
+      write(color.toUpperCase(), x + columnWidth - 80, 10, regular, MUTED_COLOR)
+      if (column === 1 || i === template.zones.length - 1) y -= ROW_HEIGHT
+    })
+
+    y -= 14
+    ensureSpace(ROW_HEIGHT * 2)
+    write('Layers', MARGIN, 13, bold)
+    y -= ROW_HEIGHT + 2
+    if (doc.layers.length === 0) {
+      write('No layers - garment colors only.', MARGIN, 10, regular, MUTED_COLOR)
+    }
+    ;[...doc.layers].reverse().forEach((layer, i) => {
+      ensureSpace(ROW_HEIGHT)
+      write(`${i + 1}. ${describeLayer(layer, template)}`, MARGIN, 10, regular, TEXT_COLOR, contentWidth)
+      y -= ROW_HEIGHT
+    })
   })
 
   return pdf.save()

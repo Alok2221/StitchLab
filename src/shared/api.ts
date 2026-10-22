@@ -12,6 +12,16 @@ export interface SaveFileRequest {
   data: Uint8Array | string
 }
 
+export interface SaveFilesRequest {
+  format: ExportFormat
+  files: { name: string; data: Uint8Array | string }[]
+}
+
+export interface SavedFiles {
+  directory: string
+  paths: string[]
+}
+
 export interface SaveProjectRequest {
   /** Existing project path; `null` shows a Save As dialog. */
   path: string | null
@@ -40,6 +50,8 @@ export interface StitchLabApi {
   }
   /** Shows a save dialog and writes the file. Resolves to the saved path, or null when cancelled. */
   saveFile: (request: SaveFileRequest) => Promise<string | null>
+  /** Asks for a folder and writes every file into it without overwriting existing ones. Null when cancelled. */
+  saveFiles: (request: SaveFilesRequest) => Promise<SavedFiles | null>
   saveProject: (request: SaveProjectRequest) => Promise<string | null>
   openProject: () => Promise<ProjectFile | null>
   writeRecovery: (data: Uint8Array, path: string | null) => Promise<void>
@@ -48,6 +60,7 @@ export interface StitchLabApi {
 }
 
 export const IPC_SAVE_FILE = 'file:save'
+export const IPC_SAVE_FILES = 'file:saveMany'
 export const IPC_SAVE_PROJECT = 'project:save'
 export const IPC_OPEN_PROJECT = 'project:open'
 export const IPC_WRITE_RECOVERY = 'recovery:write'

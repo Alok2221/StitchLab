@@ -21,6 +21,10 @@ export function ExportDialog({ onClose, onExported }: Props) {
   const [format, setFormat] = useState<ExportFormat>('png')
   const [pngScale, setPngScale] = useState(4)
   const [transparent, setTransparent] = useState(true)
+  const colorwayCount = useEditor((s) => s.doc.colorways.length)
+  const activeName = useEditor((s) => s.doc.colorways.find((c) => c.id === s.doc.activeColorwayId)?.name)
+  const [allColorways, setAllColorways] = useState(colorwayCount > 1)
+  const exportAll = allColorways && colorwayCount > 1
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,13 +40,14 @@ export function ExportDialog({ onClose, onExported }: Props) {
     setBusy(true)
     setError(null)
     try {
-      const path = await exportDesign(useEditor.getState().doc, template, {
+      const message = await exportDesign(useEditor.getState().doc, template, {
         format,
         pngScale,
-        background: transparent && format !== 'pdf' ? null : '#ffffff'
+        background: transparent && format !== 'pdf' ? null : '#ffffff',
+        allColorways: exportAll
       })
-      if (path) {
-        onExported(`Exported to ${path}`)
+      if (message) {
+        onExported(message)
         onClose()
       }
     } catch (e) {
@@ -89,6 +94,22 @@ export function ExportDialog({ onClose, onExported }: Props) {
           </label>
         )}
 
+        {colorwayCount > 1 && (
+          <>
+            <label className="field checkbox">
+              <input type="checkbox" checked={allColorways} onChange={(e) => setAllColorways(e.target.checked)} />
+              <span>All colorways ({colorwayCount})</span>
+            </label>
+            <p className="hint">
+              {!exportAll
+                ? `Only the active colorway: ${activeName}.`
+                : format === 'pdf'
+                  ? 'One PDF with an overview page and a spec sheet per colorway.'
+                  : `One ${format.toUpperCase()} file per colorway, saved into a folder you choose.`}
+            </p>
+          </>
+        )}
+
         {error && <p className="error">{error}</p>}
 
         <div className="modal-actions">
@@ -96,7 +117,7 @@ export function ExportDialog({ onClose, onExported }: Props) {
             Cancel
           </button>
           <button className="primary" onClick={run} disabled={busy}>
-            {busy ? 'Exporting...' : `Export ${format.toUpperCase()}`}
+            {busy ? 'Exporting...' : exportAll ? `Export ${colorwayCount} colorways` : `Export ${format.toUpperCase()}`}
           </button>
         </div>
       </div>

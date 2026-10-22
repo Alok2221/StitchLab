@@ -264,6 +264,59 @@ button.primary:hover:not(:disabled) {
   background: #2d3447;
 }
 
+.colorway-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.colorway-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+}
+
+.colorway-swatch {
+  width: 100%;
+  padding: 4px;
+  background: #2b2c33;
+}
+
+.colorway-card.selected .colorway-swatch {
+  border-color: var(--accent);
+  background: #2d3447;
+}
+
+.colorway-swatch img {
+  display: block;
+  width: 100%;
+  height: 48px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.colorway-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colorway-card.selected .colorway-name {
+  color: var(--text, #e8e8ec);
+  font-weight: 600;
+}
+
+.colorway-name-input {
+  width: 100%;
+  min-width: 0;
+  font-size: 11px;
+  padding: 1px 3px;
+}
+
 .parts-list {
   list-style: none;
   margin: 0;

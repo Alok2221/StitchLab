@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { EditorCanvas } from './canvas/EditorCanvas'
+import { ColorwaysPanel } from './panels/ColorwaysPanel'
 import { useEditor } from './document/store'
 import { LayersPanel } from './panels/LayersPanel'
 import { PalettePanel } from './panels/PalettePanel'
@@ -73,6 +74,7 @@ export function App() {
       <Toolbar />
       <aside className="panel panel-left">
         <TemplatesPanel />
+        <ColorwaysPanel />
         <PartsPanel />
       </aside>
       <main className="workspace">

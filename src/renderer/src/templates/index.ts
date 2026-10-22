@@ -41,10 +41,10 @@ export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   footwear: 'Footwear'
 }
 
-export function templateThumbnail(template: GarmentTemplate): string {
+export function templateThumbnail(template: GarmentTemplate, colors: Record<string, string> = {}): string {
   const { x, y, width, height } = template.viewBox
   const paths = template.zones
-    .map((z) => `<path d="${z.path}" fill="${z.defaultColor}" stroke="#2b2b30" stroke-width="4" />`)
+    .map((z) => `<path d="${z.path}" fill="${colors[z.id] ?? z.defaultColor}" stroke="#2b2b30" stroke-width="4" />`)
     .join('')
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}">${paths}</svg>`
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`

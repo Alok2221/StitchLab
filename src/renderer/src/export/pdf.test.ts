@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
 import { CLIP_GARMENT, CLIP_NONE, createDocument, zoneClip, type TextLayer } from '../document/model'
 import type { GarmentTemplate } from '../templates/parseTemplate'
-import { buildPdf, clipLabel, hexToRgb, toWinAnsi } from './pdf'
+import { colorwayFileStem } from '.'
+import { buildPdf, clipLabel, hexToRgb, toWinAnsi, type PdfSheet } from './pdf'
 
 const ONE_PIXEL_PNG = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='),
@@ -40,10 +41,18 @@ const layer: TextLayer = {
   fill: '#000000'
 }
 
+const sheet = (name: string | null, body = '#ffffff'): PdfSheet => ({
+  name,
+  zoneColors: { body, collar: '#cccccc' },
+  png: ONE_PIXEL_PNG,
+  pngWidth: 200,
+  pngHeight: 300
+})
+
 describe('PDF export', () => {
   it('builds a valid A4 PDF with non-Latin text in layer names', async () => {
     const doc = { ...createDocument(template.id, template.zones), layers: [layer] }
-    const bytes = await buildPdf({ doc, template, png: ONE_PIXEL_PNG, pngWidth: 200, pngHeight: 300 })
+    const bytes = await buildPdf({ doc, template, sheets: [sheet(null)] })
     const parsed = await PDFDocument.load(bytes)
     expect(parsed.getPageCount()).toBe(1)
     expect(parsed.getTitle()).toBe('Test shirt - StitchLab')
@@ -55,8 +64,27 @@ describe('PDF export', () => {
   it('adds pages when the layer list is long', async () => {
     const layers = Array.from({ length: 60 }, (_, i) => ({ ...layer, id: `t${i}`, name: `Text ${i}` }))
     const doc = { ...createDocument(template.id, template.zones), layers }
-    const parsed = await PDFDocument.load(await buildPdf({ doc, template, png: ONE_PIXEL_PNG, pngWidth: 200, pngHeight: 300 }))
+    const parsed = await PDFDocument.load(await buildPdf({ doc, template, sheets: [sheet(null)] }))
     expect(parsed.getPageCount()).toBeGreaterThan(1)
+  })
+
+  it('adds an overview page and one spec page per colorway', async () => {
+    const doc = createDocument(template.id, template.zones)
+    const sheets = [sheet('Black', '#111111'), sheet('Navy drop', '#1f2a44'), sheet('Żółty', '#f2c94c')]
+    const parsed = await PDFDocument.load(await buildPdf({ doc, template, sheets }))
+    expect(parsed.getPageCount()).toBe(4)
+  })
+
+  it('needs at least one sheet', async () => {
+    const doc = createDocument(template.id, template.zones)
+    await expect(buildPdf({ doc, template, sheets: [] })).rejects.toThrow('Nothing to export')
+  })
+
+  it('names colorway files safely', () => {
+    expect(colorwayFileStem(template, { id: 'c1', name: 'Navy / Żółty v1.2', zoneColors: {} })).toBe(
+      'test-shirt-navy-zolty-v1-2'
+    )
+    expect(colorwayFileStem(template, { id: 'c1', name: '🚀', zoneColors: {} })).toBe('test-shirt-c1')
   })
 
   it('transliterates text for standard PDF fonts', () => {
