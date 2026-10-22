@@ -1,28 +1,6 @@
 import { useRef, type ChangeEvent } from 'react'
 import { useEditor } from '../document/store'
-
-const FALLBACK_IMAGE_SIZE = 512
-
-function readImage(file: File): Promise<{ src: string; width: number; height: number; name: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(reader.error)
-    reader.onload = () => {
-      const src = reader.result as string
-      const img = new Image()
-      img.onerror = () => reject(new Error(`Could not read image ${file.name}`))
-      img.onload = () =>
-        resolve({
-          src,
-          width: img.naturalWidth || FALLBACK_IMAGE_SIZE,
-          height: img.naturalHeight || FALLBACK_IMAGE_SIZE,
-          name: file.name.replace(/\.[^.]+$/, '')
-        })
-      img.src = src
-    }
-    reader.readAsDataURL(file)
-  })
-}
+import { IMAGE_ACCEPT, readImage } from './readImage'
 
 export function LayersPanel() {
   const layers = useEditor((s) => s.doc.layers)
@@ -58,7 +36,7 @@ export function LayersPanel() {
           <input
             ref={fileInput}
             type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            accept={IMAGE_ACCEPT}
             multiple
             hidden
             onChange={onFiles}

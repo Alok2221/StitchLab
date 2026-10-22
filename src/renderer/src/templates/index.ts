@@ -6,6 +6,8 @@ import toteBag from './tote-bag.svg?raw'
 import sneakerSide from './sneaker-side.svg?raw'
 import chelseaBootSide from './chelsea-boot-side.svg?raw'
 import slideSandalSide from './slide-sandal-side.svg?raw'
+import type { ZonePattern } from '../document/model'
+import { patternDef } from '../document/patterns'
 import { parseTemplate, type GarmentTemplate, type TemplateCategory } from './parseTemplate'
 
 export const templateSources: Record<string, string> = {
@@ -41,12 +43,22 @@ export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   footwear: 'Footwear'
 }
 
-export function templateThumbnail(template: GarmentTemplate, colors: Record<string, string> = {}): string {
+export function templateThumbnail(
+  template: GarmentTemplate,
+  colors: Record<string, string> = {},
+  patterns: Record<string, ZonePattern> = {}
+): string {
   const { x, y, width, height } = template.viewBox
+  let defs = ''
   const paths = template.zones
-    .map((z) => `<path d="${z.path}" fill="${colors[z.id] ?? z.defaultColor}" stroke="#2b2b30" stroke-width="4" />`)
+    .map((z, i) => {
+      const color = colors[z.id] ?? z.defaultColor
+      const pattern = patterns[z.id]
+      if (pattern) defs += patternDef(`p${i}`, pattern, color)
+      return `<path d="${z.path}" fill="${pattern ? `url(#p${i})` : color}" stroke="#2b2b30" stroke-width="4" />`
+    })
     .join('')
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}">${paths}</svg>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}">${defs ? `<defs>${defs}</defs>` : ''}${paths}</svg>`
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 

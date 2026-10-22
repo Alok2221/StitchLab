@@ -5,6 +5,7 @@ import { useEditor } from './document/store'
 import { LayersPanel } from './panels/LayersPanel'
 import { PalettePanel } from './panels/PalettePanel'
 import { PartsPanel } from './panels/PartsPanel'
+import { PatternPanel } from './panels/PatternPanel'
 import { PropertiesPanel } from './panels/PropertiesPanel'
 import { StatusBar } from './panels/StatusBar'
 import { TemplatesPanel } from './panels/TemplatesPanel'
@@ -85,6 +86,7 @@ export function App() {
         <LayersPanel />
         <PropertiesPanel />
         <PalettePanel />
+        <PatternPanel />
       </aside>
       <StatusBar />
     </div>

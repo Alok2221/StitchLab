@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { commit, createDocument, HISTORY_LIMIT, initialColorways, redo, undo, type History } from './model'
+import { commit, createDocument, HISTORY_LIMIT, initialColorways, redo, undo, type History, type ZonePattern } from './model'
 
 const zones = [
   { id: 'body', defaultColor: '#ffffff' },
@@ -26,6 +26,22 @@ describe('document model', () => {
     const redone = redo(undone.doc, undone.history)
     expect(redone.doc.zoneColors.body).toBe('#c8102e')
     expect(redone.history.future).toHaveLength(0)
+  })
+
+  it('sets, adjusts and removes a part pattern with merged slider edits', () => {
+    const stripes: ZonePattern = { kind: 'stripes', color: '#000000', scale: 1, angle: 0 }
+    let s = commit(createDocument('tshirt-front', zones), empty, { type: 'setZonePattern', zoneId: 'body', from: null, to: stripes })
+    for (const scale of [1.2, 1.5, 2]) {
+      const from = s.doc.zonePatterns.body
+      s = commit(s.doc, s.history, { type: 'setZonePattern', zoneId: 'body', from, to: { ...stripes, scale }, mergeKey: 'pattern:body:scale' })
+    }
+    expect(s.history.past).toHaveLength(2)
+    expect(s.doc.zonePatterns.body.scale).toBe(2)
+    expect(undo(s.doc, s.history).doc.zonePatterns.body.scale).toBe(1)
+
+    const removed = commit(s.doc, s.history, { type: 'setZonePattern', zoneId: 'body', from: s.doc.zonePatterns.body, to: null })
+    expect(removed.doc.zonePatterns).toEqual({})
+    expect(undo(removed.doc, removed.history).doc.zonePatterns.body.scale).toBe(2)
   })
 
   it('clears the redo stack on a new operation', () => {

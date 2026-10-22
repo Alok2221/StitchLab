@@ -6,6 +6,8 @@ parts, add text, graphics and patterns, and export a production-ready design.
 
 **Status:** early MVP - template library (T-shirt, hoodie, trousers, dress,
 tote bag, sneaker, Chelsea boot, slide sandal), per-part coloring, palette,
+part patterns (stripes, checks, dots, grid or your own image, with size and
+angle),
 text and image layers with move / scale / rotate and clipping to the garment
 or a single part, undo / redo, pan and zoom, and export to PNG (1x-8x,
 transparent or white background), SVG (editable vector) and PDF (A4 sheet with

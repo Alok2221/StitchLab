@@ -38,25 +38,53 @@ export type Layer = TextLayer | ImageLayer
 
 export type LayerPatch = Partial<Omit<TextLayer, 'id' | 'type'>> & Partial<Omit<ImageLayer, 'id' | 'type'>>
 
-export interface Colorway {
-  id: string
-  name: string
-  /** Part colors of this colorway. For the active colorway, `DesignDocument.zoneColors` is authoritative. */
-  zoneColors: Record<string, string>
+export const PATTERN_KINDS = ['stripes', 'checks', 'dots', 'grid', 'image'] as const
+export type PatternKind = (typeof PATTERN_KINDS)[number]
+
+interface PatternBase {
+  /** Tile size multiplier. */
+  scale: number
+  /** Degrees. */
+  angle: number
 }
 
-export interface DesignDocument {
-  templateId: string
-  /** Live part colors of the active colorway. */
+export interface GeometricPattern extends PatternBase {
+  kind: Exclude<PatternKind, 'image'>
+  /** Ink color drawn over the part color. */
+  color: string
+}
+
+export interface ImagePattern extends PatternBase {
+  kind: 'image'
+  src: string
+  width: number
+  height: number
+}
+
+/** Repeating fill drawn over a part's base color. */
+export type ZonePattern = GeometricPattern | ImagePattern
+
+/** How the garment parts are filled: base colors plus optional patterns. */
+export interface ZoneFills {
   zoneColors: Record<string, string>
+  zonePatterns: Record<string, ZonePattern>
+}
+
+export interface Colorway extends ZoneFills {
+  id: string
+  name: string
+}
+
+/** For the active colorway, the document-level `zoneColors` and `zonePatterns` are authoritative. */
+export interface DesignDocument extends ZoneFills {
+  templateId: string
   colorways: Colorway[]
   activeColorwayId: string
   palette: string[]
   layers: Layer[]
 }
 
-export interface ColorwayState {
-  zoneColors: Record<string, string>
+export interface ColorwayState extends ZoneFills {
   colorways: Colorway[]
   activeColorwayId: string
 }
@@ -67,6 +95,7 @@ export interface GarmentState extends ColorwayState {
 
 export type Operation =
   | { type: 'setZoneColor'; zoneId: string; from: string; to: string }
+  | { type: 'setZonePattern'; zoneId: string; from: ZonePattern | null; to: ZonePattern | null; mergeKey?: string }
   | { type: 'addPaletteColor'; color: string }
   | { type: 'setTemplate'; from: GarmentState; to: GarmentState }
   | { type: 'setColorways'; from: ColorwayState; to: ColorwayState; mergeKey?: string }
@@ -99,10 +128,14 @@ export function defaultZoneColors(zones: { id: string; defaultColor: string }[])
 
 export const FIRST_COLORWAY_ID = 'colorway-1'
 
-export function initialColorways(zoneColors: Record<string, string>): ColorwayState {
+export function initialColorways(
+  zoneColors: Record<string, string>,
+  zonePatterns: Record<string, ZonePattern> = {}
+): ColorwayState {
   return {
     zoneColors,
-    colorways: [{ id: FIRST_COLORWAY_ID, name: 'Colorway 1', zoneColors }],
+    zonePatterns,
+    colorways: [{ id: FIRST_COLORWAY_ID, name: 'Colorway 1', zoneColors, zonePatterns }],
     activeColorwayId: FIRST_COLORWAY_ID
   }
 }
@@ -120,12 +153,19 @@ export function createDocument(
 }
 
 export function colorwayState(doc: DesignDocument): ColorwayState {
-  return { zoneColors: doc.zoneColors, colorways: doc.colorways, activeColorwayId: doc.activeColorwayId }
+  return {
+    zoneColors: doc.zoneColors,
+    zonePatterns: doc.zonePatterns,
+    colorways: doc.colorways,
+    activeColorwayId: doc.activeColorwayId
+  }
 }
 
-/** All colorways with the active one carrying the live part colors. */
+/** All colorways with the active one carrying the live fills. */
 export function resolvedColorways(doc: DesignDocument): Colorway[] {
-  return doc.colorways.map((c) => (c.id === doc.activeColorwayId ? { ...c, zoneColors: doc.zoneColors } : c))
+  return doc.colorways.map((c) =>
+    c.id === doc.activeColorwayId ? { ...c, zoneColors: doc.zoneColors, zonePatterns: doc.zonePatterns } : c
+  )
 }
 
 /** The document as it looks with another colorway active. */
@@ -133,7 +173,20 @@ export function withColorway(doc: DesignDocument, colorwayId: string): DesignDoc
   const colorways = resolvedColorways(doc)
   const target = colorways.find((c) => c.id === colorwayId)
   if (!target) return doc
-  return { ...doc, colorways, activeColorwayId: target.id, zoneColors: target.zoneColors }
+  return {
+    ...doc,
+    colorways,
+    activeColorwayId: target.id,
+    zoneColors: target.zoneColors,
+    zonePatterns: target.zonePatterns
+  }
+}
+
+function withPattern(patterns: Record<string, ZonePattern>, zoneId: string, pattern: ZonePattern | null) {
+  const next = { ...patterns }
+  if (pattern) next[zoneId] = pattern
+  else delete next[zoneId]
+  return next
 }
 
 function insertAt<T>(items: T[], index: number, item: T): T[] {
@@ -161,6 +214,8 @@ export function applyOperation(doc: DesignDocument, op: Operation): DesignDocume
   switch (op.type) {
     case 'setZoneColor':
       return { ...doc, zoneColors: { ...doc.zoneColors, [op.zoneId]: op.to } }
+    case 'setZonePattern':
+      return { ...doc, zonePatterns: withPattern(doc.zonePatterns, op.zoneId, op.to) }
     case 'addPaletteColor':
       return { ...doc, palette: [...doc.palette, op.color] }
     case 'setTemplate':
@@ -181,6 +236,8 @@ export function revertOperation(doc: DesignDocument, op: Operation): DesignDocum
   switch (op.type) {
     case 'setZoneColor':
       return { ...doc, zoneColors: { ...doc.zoneColors, [op.zoneId]: op.from } }
+    case 'setZonePattern':
+      return { ...doc, zonePatterns: withPattern(doc.zonePatterns, op.zoneId, op.from) }
     case 'addPaletteColor':
       return { ...doc, palette: doc.palette.slice(0, -1) }
     case 'setTemplate':
@@ -214,6 +271,15 @@ function mergeWithLast(past: Operation[], op: Operation): Operation[] {
     return [...past.slice(0, -1), merged]
   }
   if (op.type === 'setColorways' && op.mergeKey && last?.type === 'setColorways' && last.mergeKey === op.mergeKey) {
+    return [...past.slice(0, -1), { ...op, from: last.from }]
+  }
+  if (
+    op.type === 'setZonePattern' &&
+    op.mergeKey &&
+    last?.type === 'setZonePattern' &&
+    last.mergeKey === op.mergeKey &&
+    last.zoneId === op.zoneId
+  ) {
     return [...past.slice(0, -1), { ...op, from: last.from }]
   }
   const next = [...past, op]

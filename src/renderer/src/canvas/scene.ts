@@ -3,6 +3,7 @@ import {
   Container,
   Graphics,
   GraphicsPath,
+  Matrix,
   Point,
   Sprite,
   Text,
@@ -10,7 +11,8 @@ import {
   type FederatedPointerEvent
 } from 'pixi.js'
 import { useEditor } from '../document/store'
-import { CLIP_GARMENT, CLIP_NONE, zoneClip, type Layer } from '../document/model'
+import { CLIP_GARMENT, CLIP_NONE, zoneClip, type Layer, type ZonePattern } from '../document/model'
+import { tileSvg } from '../document/patterns'
 import { getTemplate, type GarmentTemplate } from '../templates'
 
 const MIN_ZOOM = 0.1
@@ -45,7 +47,36 @@ type Gesture =
   | { kind: 'scale'; layerId: string; mergeKey: string; center: Point; startDistance: number; scale: number }
   | { kind: 'rotate'; layerId: string; mergeKey: string; center: Point; startAngle: number; rotation: number }
 
+/** Pixels per template unit in pattern tile textures. */
+const PATTERN_RESOLUTION = 4
+
 const textures = new Map<string, Promise<Texture>>()
+const patternTextures = new Map<string, Texture>()
+const pendingPatterns = new Set<string>()
+
+/** Scale and angle are applied through the fill matrix, so they are not part of the texture key. */
+function patternKey(pattern: ZonePattern, base: string): string {
+  if (pattern.kind !== 'image') return `${pattern.kind}|${pattern.color}|${base}`
+  return `image|${base}|${pattern.width}x${pattern.height}|${pattern.src.length}|${pattern.src.slice(-64)}`
+}
+
+function loadPatternTexture(key: string, pattern: ZonePattern, base: string): Promise<void> {
+  pendingPatterns.add(key)
+  const { svg } = tileSvg(pattern, base, PATTERN_RESOLUTION)
+  const img = new Image()
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  return img
+    .decode()
+    .then(() => {
+      patternTextures.set(key, Texture.from(img))
+    })
+    .finally(() => pendingPatterns.delete(key))
+}
+
+function patternMatrix(pattern: ZonePattern): Matrix {
+  const scale = pattern.scale / PATTERN_RESOLUTION
+  return new Matrix().scale(scale, scale).rotate((pattern.angle * Math.PI) / 180)
+}
 
 function loadTexture(src: string): Promise<Texture> {
   let texture = textures.get(src)
@@ -89,6 +120,7 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
   const views = new Map<string, LayerView>()
   let gesture: Gesture | null = null
   let gestureCount = 0
+  let destroyed = false
 
   // --- garment --------------------------------------------------------------
 
@@ -118,12 +150,24 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
   const drawZones = () => {
     const { doc, selectedZoneId } = useEditor.getState()
     for (const zone of template.zones) {
-      zoneGraphics
-        .get(zone.id)!
-        .clear()
-        .path(new GraphicsPath(zone.path))
-        .fill(doc.zoneColors[zone.id] ?? zone.defaultColor)
-        .stroke({ width: 1.5, color: OUTLINE_COLOR })
+      const color = doc.zoneColors[zone.id] ?? zone.defaultColor
+      const pattern = doc.zonePatterns[zone.id]
+      const g = zoneGraphics.get(zone.id)!.clear().path(new GraphicsPath(zone.path))
+      const key = pattern && patternKey(pattern, color)
+      const texture = key && patternTextures.get(key)
+      if (pattern && texture) {
+        g.fill({ texture, matrix: patternMatrix(pattern), textureSpace: 'global' })
+      } else {
+        g.fill(color)
+        if (pattern && key && !pendingPatterns.has(key)) {
+          loadPatternTexture(key, pattern, color)
+            .then(() => {
+              if (!destroyed) drawZones()
+            })
+            .catch((error: unknown) => console.error('Could not render pattern', error))
+        }
+      }
+      g.stroke({ width: 1.5, color: OUTLINE_COLOR })
     }
     zoneSelection.clear()
     const selected = template.zones.find((z) => z.id === selectedZoneId)
@@ -432,7 +476,13 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
       fit()
       return
     }
-    if (s.doc.zoneColors !== prev.doc.zoneColors || s.selectedZoneId !== prev.selectedZoneId) drawZones()
+    if (
+      s.doc.zoneColors !== prev.doc.zoneColors ||
+      s.doc.zonePatterns !== prev.doc.zonePatterns ||
+      s.selectedZoneId !== prev.selectedZoneId
+    ) {
+      drawZones()
+    }
     if (s.doc.layers !== prev.doc.layers) syncLayers()
   })
 
@@ -442,6 +492,7 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
       fit
     },
     destroy: () => {
+      destroyed = true
       unsubscribe()
       app.ticker.remove(updateOverlay)
       app.canvas.removeEventListener('wheel', onWheel)

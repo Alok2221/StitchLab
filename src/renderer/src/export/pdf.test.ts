@@ -44,6 +44,7 @@ const layer: TextLayer = {
 const sheet = (name: string | null, body = '#ffffff'): PdfSheet => ({
   name,
   zoneColors: { body, collar: '#cccccc' },
+  zonePatterns: { body: { kind: 'dots', color: '#000000', scale: 1, angle: 0 } },
   png: ONE_PIXEL_PNG,
   pngWidth: 200,
   pngHeight: 300
@@ -81,10 +82,10 @@ describe('PDF export', () => {
   })
 
   it('names colorway files safely', () => {
-    expect(colorwayFileStem(template, { id: 'c1', name: 'Navy / Żółty v1.2', zoneColors: {} })).toBe(
+    expect(colorwayFileStem(template, { id: 'c1', name: 'Navy / Żółty v1.2', zoneColors: {}, zonePatterns: {} })).toBe(
       'test-shirt-navy-zolty-v1-2'
     )
-    expect(colorwayFileStem(template, { id: 'c1', name: '🚀', zoneColors: {} })).toBe('test-shirt-c1')
+    expect(colorwayFileStem(template, { id: 'c1', name: '🚀', zoneColors: {}, zonePatterns: {} })).toBe('test-shirt-c1')
   })
 
   it('transliterates text for standard PDF fonts', () => {

@@ -7,15 +7,21 @@ export function ColorwaysPanel() {
   const colorways = useEditor((s) => s.doc.colorways)
   const activeId = useEditor((s) => s.doc.activeColorwayId)
   const liveColors = useEditor((s) => s.doc.zoneColors)
+  const livePatterns = useEditor((s) => s.doc.zonePatterns)
   const { addColorway, switchColorway, renameColorway, removeColorway } = useEditor.getState()
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
 
   const thumbnails = useMemo(
     () =>
       new Map(
-        colorways.map((c) => [c.id, templateThumbnail(template, c.id === activeId ? liveColors : c.zoneColors)])
+        colorways.map((c) => [
+          c.id,
+          c.id === activeId
+            ? templateThumbnail(template, liveColors, livePatterns)
+            : templateThumbnail(template, c.zoneColors, c.zonePatterns)
+        ])
       ),
-    [colorways, activeId, liveColors, template]
+    [colorways, activeId, liveColors, livePatterns, template]
   )
 
   const finishRename = () => {

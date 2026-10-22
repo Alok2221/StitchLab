@@ -98,6 +98,23 @@ describe('documentToSvg', () => {
     expect(svg).toContain('<tspan x="0" y="19.2">TWO</tspan>')
   })
 
+  it('fills patterned parts with a tiled pattern over the part color', () => {
+    const d = { ...doc([]), zonePatterns: { body: { kind: 'stripes' as const, color: '#ffffff', scale: 2, angle: 45 } } }
+    const svg = documentToSvg(d, template)
+    expect(svg).toMatch(/id="zone-body"[^>]*fill="url\(#fill-0\)"/)
+    expect(svg).toMatch(/id="zone-collar"[^>]*fill="#cccccc"/)
+    expect(svg).toContain('<pattern id="fill-0" patternUnits="userSpaceOnUse" width="24" height="24" patternTransform="rotate(45) scale(2)">')
+    expect(svg).toContain('<rect width="24" height="24" fill="#1d4e89"/>')
+    expect(svg).toContain('<rect width="12" height="24" fill="#ffffff"/>')
+  })
+
+  it('tiles image patterns at their aspect ratio', () => {
+    const pattern = { kind: 'image' as const, src: 'data:image/png;base64,AAAA', width: 400, height: 200, scale: 1, angle: 0 }
+    const svg = documentToSvg({ ...doc([]), zonePatterns: { collar: pattern } }, template)
+    expect(svg).toContain('<pattern id="fill-1" patternUnits="userSpaceOnUse" width="120" height="60">')
+    expect(svg).toContain('<image href="data:image/png;base64,AAAA" width="120" height="60" preserveAspectRatio="none"/>')
+  })
+
   it('adds an optional background', () => {
     expect(documentToSvg(doc([]), template, { background: '#ffffff' })).toContain('<rect x="0" y="0" width="200" height="300" fill="#ffffff" />')
   })

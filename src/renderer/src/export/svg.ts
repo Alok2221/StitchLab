@@ -1,4 +1,5 @@
 import { CLIP_GARMENT, CLIP_NONE, zoneClip, type DesignDocument, type Layer } from '../document/model'
+import { patternDef } from '../document/patterns'
 import type { GarmentTemplate } from '../templates/parseTemplate'
 
 const OUTLINE_COLOR = '#2b2b30'
@@ -66,17 +67,22 @@ export function documentToSvg(doc: DesignDocument, template: GarmentTemplate, op
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" width="${width}" height="${height}">`,
     `<title>${escapeXml(template.name)} - StitchLab</title>`
   ]
-  if (clips.length > 0) parts.push(`<defs>${clips.map((c) => clipPathDef(template, c)).join('')}</defs>`)
+  const fills = template.zones.map((zone, i) => {
+    const color = doc.zoneColors[zone.id] ?? zone.defaultColor
+    const pattern = doc.zonePatterns[zone.id]
+    return pattern ? { color, def: patternDef(`fill-${i}`, pattern, color), ref: `url(#fill-${i})` } : { color, def: '', ref: color }
+  })
+  const defs = [...clips.map((c) => clipPathDef(template, c)), ...fills.map((f) => f.def)].join('')
+  if (defs) parts.push(`<defs>${defs}</defs>`)
   if (options.background) {
     parts.push(`<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${escapeXml(options.background)}" />`)
   }
   parts.push('<g id="garment">')
-  for (const zone of template.zones) {
-    const fill = doc.zoneColors[zone.id] ?? zone.defaultColor
+  template.zones.forEach((zone, i) => {
     parts.push(
-      `<path id="zone-${escapeXml(zone.id)}" d="${escapeXml(zone.path)}" fill="${escapeXml(fill)}" stroke="${OUTLINE_COLOR}" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" />`
+      `<path id="zone-${escapeXml(zone.id)}" d="${escapeXml(zone.path)}" fill="${escapeXml(fills[i].ref)}" stroke="${OUTLINE_COLOR}" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" />`
     )
-  }
+  })
   parts.push('</g>', '<g id="layers">')
   for (const layer of layers) parts.push(layerElement(layer))
   parts.push('</g>', '</svg>')
