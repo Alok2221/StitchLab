@@ -1,7 +1,48 @@
+export const CLIP_NONE = 'none'
+export const CLIP_GARMENT = 'garment'
+export const zoneClip = (zoneId: string) => `zone:${zoneId}`
+
+/** `none`, `garment` or `zone:<zoneId>` */
+export type ClipMode = string
+
+interface LayerBase {
+  id: string
+  name: string
+  x: number
+  y: number
+  rotation: number
+  scale: number
+  opacity: number
+  visible: boolean
+  locked: boolean
+  clip: ClipMode
+}
+
+export interface TextLayer extends LayerBase {
+  type: 'text'
+  text: string
+  fontFamily: string
+  fontSize: number
+  fontWeight: 'normal' | 'bold'
+  fill: string
+}
+
+export interface ImageLayer extends LayerBase {
+  type: 'image'
+  src: string
+  width: number
+  height: number
+}
+
+export type Layer = TextLayer | ImageLayer
+
+export type LayerPatch = Partial<Omit<TextLayer, 'id' | 'type'>> & Partial<Omit<ImageLayer, 'id' | 'type'>>
+
 export interface DesignDocument {
   templateId: string
   zoneColors: Record<string, string>
   palette: string[]
+  layers: Layer[]
 }
 
 export interface GarmentState {
@@ -13,6 +54,10 @@ export type Operation =
   | { type: 'setZoneColor'; zoneId: string; from: string; to: string }
   | { type: 'addPaletteColor'; color: string }
   | { type: 'setTemplate'; from: GarmentState; to: GarmentState }
+  | { type: 'addLayer'; layer: Layer; index: number }
+  | { type: 'removeLayer'; layer: Layer; index: number }
+  | { type: 'updateLayer'; id: string; from: LayerPatch; to: LayerPatch; mergeKey?: string }
+  | { type: 'moveLayer'; from: number; to: number }
 
 export interface History {
   past: Operation[]
@@ -43,8 +88,30 @@ export function createDocument(
   return {
     templateId,
     zoneColors: defaultZoneColors(zones),
-    palette: [...DEFAULT_PALETTE]
+    palette: [...DEFAULT_PALETTE],
+    layers: []
   }
+}
+
+function insertAt<T>(items: T[], index: number, item: T): T[] {
+  const next = [...items]
+  next.splice(index, 0, item)
+  return next
+}
+
+function removeAt<T>(items: T[], index: number): T[] {
+  return items.filter((_, i) => i !== index)
+}
+
+function moveItem<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+function patchLayer(layers: Layer[], id: string, patch: LayerPatch): Layer[] {
+  return layers.map((l) => (l.id === id ? ({ ...l, ...patch } as Layer) : l))
 }
 
 export function applyOperation(doc: DesignDocument, op: Operation): DesignDocument {
@@ -55,6 +122,14 @@ export function applyOperation(doc: DesignDocument, op: Operation): DesignDocume
       return { ...doc, palette: [...doc.palette, op.color] }
     case 'setTemplate':
       return { ...doc, ...op.to }
+    case 'addLayer':
+      return { ...doc, layers: insertAt(doc.layers, op.index, op.layer) }
+    case 'removeLayer':
+      return { ...doc, layers: removeAt(doc.layers, op.index) }
+    case 'updateLayer':
+      return { ...doc, layers: patchLayer(doc.layers, op.id, op.to) }
+    case 'moveLayer':
+      return { ...doc, layers: moveItem(doc.layers, op.from, op.to) }
   }
 }
 
@@ -66,7 +141,36 @@ export function revertOperation(doc: DesignDocument, op: Operation): DesignDocum
       return { ...doc, palette: doc.palette.slice(0, -1) }
     case 'setTemplate':
       return { ...doc, ...op.from }
+    case 'addLayer':
+      return { ...doc, layers: removeAt(doc.layers, op.index) }
+    case 'removeLayer':
+      return { ...doc, layers: insertAt(doc.layers, op.index, op.layer) }
+    case 'updateLayer':
+      return { ...doc, layers: patchLayer(doc.layers, op.id, op.from) }
+    case 'moveLayer':
+      return { ...doc, layers: moveItem(doc.layers, op.to, op.from) }
   }
+}
+
+/**
+ * Consecutive `updateLayer` operations with the same `mergeKey` (one drag, one
+ * text field edit) collapse into a single history entry.
+ */
+function mergeWithLast(past: Operation[], op: Operation): Operation[] {
+  const last = past.at(-1)
+  if (
+    op.type === 'updateLayer' &&
+    op.mergeKey &&
+    last?.type === 'updateLayer' &&
+    last.mergeKey === op.mergeKey &&
+    last.id === op.id
+  ) {
+    const merged: Operation = { ...op, from: { ...op.from, ...last.from }, to: { ...last.to, ...op.to } }
+    return [...past.slice(0, -1), merged]
+  }
+  const next = [...past, op]
+  if (next.length > HISTORY_LIMIT) next.shift()
+  return next
 }
 
 export function commit(
@@ -74,9 +178,7 @@ export function commit(
   history: History,
   op: Operation
 ): { doc: DesignDocument; history: History } {
-  const past = [...history.past, op]
-  if (past.length > HISTORY_LIMIT) past.shift()
-  return { doc: applyOperation(doc, op), history: { past, future: [] } }
+  return { doc: applyOperation(doc, op), history: { past: mergeWithLast(history.past, op), future: [] } }
 }
 
 export function undo(doc: DesignDocument, history: History): { doc: DesignDocument; history: History } {
@@ -95,4 +197,10 @@ export function redo(doc: DesignDocument, history: History): { doc: DesignDocume
     doc: applyOperation(doc, op),
     history: { past: [...history.past, op], future }
   }
+}
+
+/** Values the layer currently has for every key in `patch`, used as the undo side of an update. */
+export function pickLayerValues(layer: Layer, patch: LayerPatch): LayerPatch {
+  const source = layer as unknown as Record<string, unknown>
+  return Object.fromEntries(Object.keys(patch).map((key) => [key, source[key]])) as LayerPatch
 }
