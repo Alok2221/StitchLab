@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 780" data-template-id="dress-front" data-name="Dress" data-category="dresses">
+  <path id="zone-strap-left" data-label="Left strap" fill="#7a2338"
+    d="M190 40 L214 40 L222 132 L196 132 Z" />
+  <path id="zone-strap-right" data-label="Right strap" fill="#7a2338"
+    d="M330 40 L306 40 L298 132 L324 132 Z" />
+  <path id="zone-skirt" data-label="Skirt" fill="#9b2c45"
+    d="M182 316 L338 316 Q420 520 470 720 Q260 750 50 720 Q100 520 182 316 Z" />
+  <path id="zone-bodice" data-label="Bodice" fill="#9b2c45"
+    d="M176 130 L222 130 Q260 176 298 130 L344 130 Q350 200 336 290 L184 290 Q170 200 176 130 Z" />
+  <path id="zone-belt" data-label="Belt" fill="#1f1f22"
+    d="M184 290 L336 290 L338 318 L182 318 Z" />
+  <path id="zone-hem" data-label="Hem" fill="#7a2338"
+    d="M50 720 Q260 750 470 720 L474 742 Q260 774 46 742 Z" />
+  <rect id="print-area" x="200" y="160" width="120" height="110" fill="none" />
+</svg>

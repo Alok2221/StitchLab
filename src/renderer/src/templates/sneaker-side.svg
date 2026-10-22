@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" data-template-id="sneaker-side" data-name="Sneaker" data-category="footwear">
+  <path id="zone-tongue" data-label="Tongue" fill="#d9d9d4"
+    d="M204 116 Q206 84 236 76 Q270 70 286 92 Q300 118 304 150 Q258 150 204 116 Z" />
+  <path id="zone-upper" data-label="Upper" fill="#f4f4f2"
+    d="M70 290 Q58 180 90 120 Q110 90 150 100 L200 112 Q260 150 330 150 L420 170 Q560 190 650 230 Q712 258 704 292 Z" />
+  <path id="zone-heel-counter" data-label="Heel counter" fill="#1d4e89"
+    d="M70 290 Q58 180 90 120 Q110 92 150 100 Q148 200 192 290 Z" />
+  <path id="zone-toe-cap" data-label="Toe cap" fill="#d9d9d4"
+    d="M560 292 Q584 222 650 230 Q712 258 704 292 Z" />
+  <path id="zone-side-panel" data-label="Side panel" fill="#1d4e89"
+    d="M250 262 Q380 182 540 200 Q430 232 330 282 Z" />
+  <path id="zone-laces" data-label="Laces" fill="#1f1f22"
+    d="M300 158 L376 150 L379 160 L303 168 Z M340 174 L418 166 L421 176 L343 184 Z M382 190 L460 184 L463 194 L385 200 Z" />
+  <path id="zone-midsole" data-label="Midsole" fill="#f4f4f2"
+    d="M58 288 L650 292 Q718 298 730 332 L52 332 Q44 308 58 288 Z" />
+  <path id="zone-outsole" data-label="Outsole" fill="#3b3f4a"
+    d="M54 332 L730 332 Q734 352 718 364 Q706 372 690 372 L72 372 Q50 370 48 352 Q48 338 54 332 Z" />
+</svg>

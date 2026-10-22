@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 760" data-template-id="trousers-front" data-name="Trousers" data-category="bottoms">
+  <path id="zone-leg-left" data-label="Left leg" fill="#2f3e5c"
+    d="M108 88 L250 88 L250 232 L230 720 L118 720 Q96 400 108 88 Z" />
+  <path id="zone-leg-right" data-label="Right leg" fill="#2f3e5c"
+    d="M392 88 L250 88 L250 232 L270 720 L382 720 Q404 400 392 88 Z" />
+  <path id="zone-hem-left" data-label="Left hem" fill="#28354f"
+    d="M118 696 L231 696 L230 720 L118 720 Z" />
+  <path id="zone-hem-right" data-label="Right hem" fill="#28354f"
+    d="M382 696 L269 696 L270 720 L382 720 Z" />
+  <path id="zone-pocket-left" data-label="Left pocket" fill="#28354f"
+    d="M112 88 L172 88 Q156 136 110 160 Z" />
+  <path id="zone-pocket-right" data-label="Right pocket" fill="#28354f"
+    d="M388 88 L328 88 Q344 136 390 160 Z" />
+  <path id="zone-waistband" data-label="Waistband" fill="#28354f"
+    d="M108 40 L392 40 L392 88 L108 88 Z" />
+  <path id="zone-button" data-label="Button" fill="#c9a24b"
+    d="M240 64 C240 58.5 244.5 54 250 54 C255.5 54 260 58.5 260 64 C260 69.5 255.5 74 250 74 C244.5 74 240 69.5 240 64 Z" />
+  <rect id="print-area" x="140" y="190" width="90" height="140" fill="none" />
+</svg>

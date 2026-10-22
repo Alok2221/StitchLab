@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 640" data-template-id="chelsea-boot-side" data-name="Chelsea boot" data-category="footwear">
+  <path id="zone-pull-tab" data-label="Pull tab" fill="#1f1f22"
+    d="M128 96 L146 34 Q156 22 168 34 L180 96 Z" />
+  <path id="zone-upper" data-label="Upper" fill="#6b4a32"
+    d="M110 560 L120 122 Q122 92 150 92 L300 92 Q320 92 322 122 L330 330 Q340 400 420 430 Q560 470 590 530 L590 560 Z" />
+  <path id="zone-elastic" data-label="Elastic panel" fill="#1f1f22"
+    d="M196 92 L276 92 Q280 230 300 330 Q246 360 182 330 Q196 230 196 92 Z" />
+  <path id="zone-sole" data-label="Sole" fill="#2c2f37"
+    d="M84 560 L592 560 Q614 562 612 584 L612 600 L88 600 Q78 580 84 560 Z" />
+  <path id="zone-heel" data-label="Heel" fill="#3b3f4a"
+    d="M84 560 L204 560 L200 600 L88 600 Q78 580 84 560 Z" />
+</svg>

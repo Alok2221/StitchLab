@@ -1,0 +1,28 @@
+appId: com.stitchlab.app
+productName: StitchLab
+copyright: Copyright © 2026 Alok2221
+
+directories:
+  output: release
+  buildResources: build
+
+# Renderer dependencies are bundled by Vite into out/, so node_modules is not shipped.
+files:
+  - out/**/*
+  - package.json
+  - "!node_modules/**/*"
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: StitchLab

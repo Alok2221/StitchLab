@@ -15,7 +15,9 @@ Decisions for the StitchLab desktop app. Product context is in
 - **3D preview:** Three.js
 - **State:** Zustand, with an operation-based document model for undo / redo
 - **Export:** PNG from the renderer, SVG from the document model, PDF via pdf-lib
-- **Packaging:** electron-builder (Windows NSIS installer, macOS DMG)
+- **Packaging:** electron-builder - Windows NSIS installer (`npm run dist:win`),
+  macOS DMG planned. Only `out/` is packed into the asar; renderer
+  dependencies are already bundled by Vite.
 - **Tests:** Vitest (unit), Playwright for Electron (end-to-end)
 - **Quality:** ESLint, Prettier
 
@@ -59,29 +61,96 @@ process.
 
 ---
 
+## Export pipeline
+
+The SVG generated from the document model (`src/renderer/src/export/svg.ts`) is
+the single source for every format:
+
+- **SVG** - written as is; garment parts are `<path>` elements, layers keep their
+  transforms and clip paths.
+- **PNG** - the SVG is rasterized by Chromium onto a canvas at the chosen scale.
+- **PDF** - pdf-lib builds an A4 sheet with a 2400 px render of the design and a
+  spec: part colors with HEX values and the layer list. Standard PDF fonts only
+  support WinAnsi, so non-Latin text in the spec is transliterated.
+
+**Colorways** - the document keeps a list of colorways (name, part colors and
+part patterns) and the id of the active one; `zoneColors` and `zonePatterns`
+hold the live fills of the active colorway.
+
+**Patterns** - a part can have a repeating pattern (stripes, checks, dots, grid
+or an image) drawn over its base color. Each pattern is defined once as an SVG
+tile in template units (`src/renderer/src/document/patterns.ts`). Export puts
+the tile into an SVG `<pattern>` with `patternTransform` for size and angle; the
+canvas rasterizes the same tile into a Pixi texture and applies the same
+transform through the fill matrix, so the editor and the export match. Exporting all colorways renders the same SVG once per colorway: PNG
+and SVG become one file each, the PDF gets an overview page with every
+colorway followed by one spec sheet per colorway.
+
+The renderer never touches the file system; it sends the bytes to the main
+process, which shows the dialog, validates the request and writes the files.
+`file:save` writes a single file; `file:saveMany` asks for a folder, sanitizes
+the names and never overwrites existing files (it adds ` (2)`, ` (3)`, ...).
+
 ## Project file format
 
-A `.stitch` file is a zip archive:
+A `.stitch` file is a zip archive (fflate):
 
 ```
-project.json      document model (garments, layers, palette, operations log)
-assets/           imported images and SVGs
-versions/         named snapshots
-thumbnail.png     preview for the file browser
+project.json      { format: "stitchlab-project", version, savedAt, document }
+assets/           imported images, named by content hash, stored once
+thumbnail.png     256 px preview
+versions/         named snapshots (planned)
 ```
+
+`project.json` holds the template id, part colors and patterns, colorways,
+palette and layers; image layers and image patterns reference
+`assets/<hash>.<ext>` instead of embedding data. Loading validates every field,
+rejects files from newer format versions and fills in parts added to a template
+after the file was saved. Format version 2 added colorways and version 3 part
+patterns; older files open with a single colorway and no patterns.
+
+The main process only writes project files to paths the user picked in a
+dialog during the session, and saves through a temporary file and a rename.
+
+**Recovery** - 1.5 s after each change the renderer writes the document to
+`<userData>/recovery/`. On startup a leftover recovery file is offered for
+restore; saving, opening, starting a new project or closing without saving
+clears it.
 
 ---
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 src/
-  main/           Electron main process
-  preload/        IPC bridge
-  renderer/       React app
-    canvas/       PixiJS editor
-    preview3d/    Three.js preview
-    document/     document model and operations
-templates/        garment SVG templates
+  main/             Electron main process
+  preload/          IPC bridge
+  shared/           types shared between processes
+  renderer/
+    index.html
+    src/
+      canvas/       PixiJS editor
+      document/     document model, operations, store
+      panels/       React UI around the canvas
+      templates/    garment SVG templates and parser
+      preview3d/    Three.js preview (planned)
 docs/
 ```
+
+## Garment template format
+
+A template is an SVG file with:
+
+- `data-template-id`, `data-name` and `data-category` (`tops`, `bottoms`,
+  `dresses`, `bags`, `footwear`) on the root `<svg>`,
+- one `<path id="zone-<name>" data-label="..." fill="...">` per colorable part;
+  `fill` is the default color, document order is drawing order,
+- an optional `<rect id="print-area" fill="none">` marking the printable area.
+
+New templates are registered in `src/renderer/src/templates/index.ts`. The
+template tests check every registered file: unique ids, labeled zones, hex
+colors, drawable paths and a print area inside the viewBox. Footwear templates
+use a side view.
+
+PixiJS runs with `pixi.js/unsafe-eval` so the renderer keeps a strict
+Content Security Policy without `'unsafe-eval'`.
