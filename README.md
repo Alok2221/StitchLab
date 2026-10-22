@@ -43,10 +43,17 @@ npm run dev        # Electron app with hot reload
 npm test           # unit tests (Vitest)
 npm run typecheck
 npm run build      # production bundle in out/
+npm run dist:win   # Windows installer in release/StitchLab-Setup-<version>.exe
 ```
 
 Electron downloads its binary in an install script; it is allowed in
 `package.json` under `allowScripts`.
+
+The installer is built with electron-builder (`electron-builder.yml`): a per-user
+NSIS setup that lets you pick the install folder and adds desktop and Start menu
+shortcuts. It is not code-signed yet, so Windows SmartScreen shows a warning on
+first run. The app icon source is `build/icon.svg`, rendered to
+`build/icon.png`.
 
 ## Documentation
 
