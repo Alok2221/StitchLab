@@ -1,5 +1,6 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
+import { registerFileHandlers } from './files'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -35,6 +36,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerFileHandlers()
   createWindow()
 
   app.on('activate', () => {
