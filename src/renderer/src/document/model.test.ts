@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { commit, createDocument, HISTORY_LIMIT, redo, undo, type History } from './model'
+import { commit, createDocument, HISTORY_LIMIT, initialColorways, redo, undo, type History } from './model'
 
 const zones = [
   { id: 'body', defaultColor: '#ffffff' },
@@ -50,8 +50,8 @@ describe('document model', () => {
     const recolored = commit(start, empty, { type: 'setZoneColor', zoneId: 'body', from: '#ffffff', to: '#c8102e' })
     const switched = commit(recolored.doc, recolored.history, {
       type: 'setTemplate',
-      from: { templateId: 'tshirt-front', zoneColors: recolored.doc.zoneColors },
-      to: { templateId: 'sneaker-side', zoneColors: { upper: '#f4f4f2', sole: '#3b3f4a' } }
+      from: { templateId: 'tshirt-front', ...initialColorways(recolored.doc.zoneColors) },
+      to: { templateId: 'sneaker-side', ...initialColorways({ upper: '#f4f4f2', sole: '#3b3f4a' }) }
     })
     expect(switched.doc.templateId).toBe('sneaker-side')
     expect(switched.doc.zoneColors).toEqual({ upper: '#f4f4f2', sole: '#3b3f4a' })

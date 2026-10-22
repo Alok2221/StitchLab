@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { CLIP_GARMENT, commit, createDocument, pickLayerValues, redo, undo, type History, type TextLayer } from './model'
+import {
+  CLIP_GARMENT,
+  commit,
+  createDocument,
+  initialColorways,
+  pickLayerValues,
+  redo,
+  undo,
+  type History,
+  type TextLayer
+} from './model'
 
 const empty: History = { past: [], future: [] }
 
@@ -95,8 +105,8 @@ describe('layer operations', () => {
     const state = withLayers('a')
     const switched = commit(state.doc, state.history, {
       type: 'setTemplate',
-      from: { templateId: 'tshirt-front', zoneColors: state.doc.zoneColors },
-      to: { templateId: 'hoodie-front', zoneColors: { body: '#333333' } }
+      from: { templateId: 'tshirt-front', ...initialColorways(state.doc.zoneColors) },
+      to: { templateId: 'hoodie-front', ...initialColorways({ body: '#333333' }) }
     })
     expect(switched.doc.layers.map((l) => l.id)).toEqual(['a'])
   })

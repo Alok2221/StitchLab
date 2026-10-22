@@ -4,6 +4,7 @@ import {
   IPC_OPEN_PROJECT,
   IPC_READ_RECOVERY,
   IPC_SAVE_FILE,
+  IPC_SAVE_FILES,
   IPC_SAVE_PROJECT,
   IPC_WRITE_RECOVERY,
   type StitchLabApi
@@ -17,6 +18,7 @@ const api: StitchLabApi = {
     node: process.versions.node
   },
   saveFile: (request) => ipcRenderer.invoke(IPC_SAVE_FILE, request),
+  saveFiles: (request) => ipcRenderer.invoke(IPC_SAVE_FILES, request),
   saveProject: (request) => ipcRenderer.invoke(IPC_SAVE_PROJECT, request),
   openProject: () => ipcRenderer.invoke(IPC_OPEN_PROJECT),
   writeRecovery: (data, path) => ipcRenderer.invoke(IPC_WRITE_RECOVERY, data, path),

@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { defaultTemplate, getTemplate, type GarmentTemplate } from '../templates'
+import { addColorway, remapColorways, removeColorway, renameColorway, switchColorway } from './colorways'
 import {
   CLIP_GARMENT,
+  colorwayState,
   commit,
   createDocument,
-  defaultZoneColors,
   pickLayerValues,
   redo,
   undo,
@@ -42,6 +43,10 @@ interface EditorState {
   updateLayer: (id: string, patch: LayerPatch, mergeKey?: string) => void
   removeLayer: (id: string) => void
   moveLayer: (id: string, direction: 'up' | 'down') => void
+  addColorway: () => void
+  switchColorway: (id: string) => void
+  renameColorway: (id: string, name: string) => void
+  removeColorway: (id: string) => void
 }
 
 type Selection = Pick<EditorState, 'selectedZoneId' | 'selectedLayerId'>
@@ -125,9 +130,29 @@ export const useEditor = create<EditorState>((set, get) => {
       const template = getTemplate(templateId)
       get().dispatch({
         type: 'setTemplate',
-        from: { templateId: doc.templateId, zoneColors: doc.zoneColors },
-        to: { templateId: template.id, zoneColors: defaultZoneColors(template.zones) }
+        from: { templateId: doc.templateId, ...colorwayState(doc) },
+        to: { templateId: template.id, ...remapColorways(doc, template.zones) }
       })
+    },
+
+    addColorway: () => {
+      const { doc } = get()
+      get().dispatch({ type: 'setColorways', from: colorwayState(doc), to: addColorway(doc, crypto.randomUUID()) })
+    },
+    switchColorway: (id) => {
+      const { doc } = get()
+      const to = switchColorway(doc, id)
+      if (to) get().dispatch({ type: 'setColorways', from: colorwayState(doc), to })
+    },
+    renameColorway: (id, name) => {
+      const { doc } = get()
+      const to = renameColorway(doc, id, name)
+      if (to) get().dispatch({ type: 'setColorways', from: colorwayState(doc), to, mergeKey: `rename:${id}` })
+    },
+    removeColorway: (id) => {
+      const { doc } = get()
+      const to = removeColorway(doc, id)
+      if (to) get().dispatch({ type: 'setColorways', from: colorwayState(doc), to })
     },
 
     addTextLayer: () => {

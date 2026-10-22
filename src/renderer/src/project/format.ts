@@ -1,13 +1,24 @@
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate'
-import type { DesignDocument, ImageLayer, Layer, TextLayer } from '../document/model'
+import {
+  initialColorways,
+  resolvedColorways,
+  type Colorway,
+  type ColorwayState,
+  type DesignDocument,
+  type ImageLayer,
+  type Layer,
+  type TextLayer
+} from '../document/model'
 
 export const PROJECT_FORMAT = 'stitchlab-project'
-export const PROJECT_VERSION = 1
+/** v2 added colorways; v1 files load with a single colorway. */
+export const PROJECT_VERSION = 2
 
 const PROJECT_JSON = 'project.json'
 const THUMBNAIL = 'thumbnail.png'
 const ASSETS_DIR = 'assets/'
 const MAX_LAYERS = 2000
+const MAX_COLORWAYS = 200
 
 const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
@@ -92,7 +103,14 @@ export async function serializeProject(
     format: PROJECT_FORMAT,
     version: PROJECT_VERSION,
     savedAt: (options.savedAt ?? new Date()).toISOString(),
-    document: { templateId: doc.templateId, zoneColors: doc.zoneColors, palette: doc.palette, layers }
+    document: {
+      templateId: doc.templateId,
+      zoneColors: doc.zoneColors,
+      colorways: resolvedColorways(doc),
+      activeColorwayId: doc.activeColorwayId,
+      palette: doc.palette,
+      layers
+    }
   }
   files[PROJECT_JSON] = strToU8(JSON.stringify(json, null, 2))
   if (options.thumbnail) files[THUMBNAIL] = [options.thumbnail, { level: 0 }]
@@ -174,6 +192,27 @@ function readLayer(raw: unknown, index: number, files: Record<string, Uint8Array
   fail(`layer ${index + 1} has an unknown type`)
 }
 
+function readColorways(raw: Record<string, unknown>, zoneColors: Record<string, string>): ColorwayState {
+  if (!Array.isArray(raw.colorways) || raw.colorways.length === 0 || raw.colorways.length > MAX_COLORWAYS) {
+    fail('invalid colorways')
+  }
+  const colorways: Colorway[] = raw.colorways.map((c, i) => {
+    if (!isObject(c) || !isString(c.id) || !c.id || !isString(c.name)) fail(`colorway ${i + 1} is invalid`)
+    if (!isObject(c.zoneColors) || !Object.values(c.zoneColors).every(isColor)) {
+      fail(`colorway ${i + 1} has invalid part colors`)
+    }
+    return { id: c.id, name: c.name, zoneColors: c.zoneColors as Record<string, string> }
+  })
+  if (new Set(colorways.map((c) => c.id)).size !== colorways.length) fail('duplicate colorway ids')
+  const active = colorways.find((c) => c.id === raw.activeColorwayId)
+  if (!active) fail('unknown active colorway')
+  return {
+    zoneColors,
+    colorways: colorways.map((c) => (c.id === active.id ? { ...c, zoneColors } : c)),
+    activeColorwayId: active.id
+  }
+}
+
 export interface LoadedProject {
   doc: DesignDocument
   savedAt: string
@@ -211,10 +250,13 @@ export function parseProject(data: Uint8Array): LoadedProject {
   const layers = raw.layers.map((layer, i) => readLayer(layer, i, files))
   if (new Set(layers.map((l) => l.id)).size !== layers.length) fail('duplicate layer ids')
 
+  const zoneColors = raw.zoneColors as Record<string, string>
+  const colorways = raw.colorways === undefined && json.version < 2 ? initialColorways(zoneColors) : readColorways(raw, zoneColors)
+
   return {
     doc: {
       templateId: raw.templateId,
-      zoneColors: raw.zoneColors as Record<string, string>,
+      ...colorways,
       palette: raw.palette as string[],
       layers
     },

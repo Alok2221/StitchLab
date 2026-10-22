@@ -38,22 +38,38 @@ export type Layer = TextLayer | ImageLayer
 
 export type LayerPatch = Partial<Omit<TextLayer, 'id' | 'type'>> & Partial<Omit<ImageLayer, 'id' | 'type'>>
 
+export interface Colorway {
+  id: string
+  name: string
+  /** Part colors of this colorway. For the active colorway, `DesignDocument.zoneColors` is authoritative. */
+  zoneColors: Record<string, string>
+}
+
 export interface DesignDocument {
   templateId: string
+  /** Live part colors of the active colorway. */
   zoneColors: Record<string, string>
+  colorways: Colorway[]
+  activeColorwayId: string
   palette: string[]
   layers: Layer[]
 }
 
-export interface GarmentState {
-  templateId: string
+export interface ColorwayState {
   zoneColors: Record<string, string>
+  colorways: Colorway[]
+  activeColorwayId: string
+}
+
+export interface GarmentState extends ColorwayState {
+  templateId: string
 }
 
 export type Operation =
   | { type: 'setZoneColor'; zoneId: string; from: string; to: string }
   | { type: 'addPaletteColor'; color: string }
   | { type: 'setTemplate'; from: GarmentState; to: GarmentState }
+  | { type: 'setColorways'; from: ColorwayState; to: ColorwayState; mergeKey?: string }
   | { type: 'addLayer'; layer: Layer; index: number }
   | { type: 'removeLayer'; layer: Layer; index: number }
   | { type: 'updateLayer'; id: string; from: LayerPatch; to: LayerPatch; mergeKey?: string }
@@ -81,16 +97,43 @@ export function defaultZoneColors(zones: { id: string; defaultColor: string }[])
   return Object.fromEntries(zones.map((z) => [z.id, z.defaultColor]))
 }
 
+export const FIRST_COLORWAY_ID = 'colorway-1'
+
+export function initialColorways(zoneColors: Record<string, string>): ColorwayState {
+  return {
+    zoneColors,
+    colorways: [{ id: FIRST_COLORWAY_ID, name: 'Colorway 1', zoneColors }],
+    activeColorwayId: FIRST_COLORWAY_ID
+  }
+}
+
 export function createDocument(
   templateId: string,
   zones: { id: string; defaultColor: string }[]
 ): DesignDocument {
   return {
     templateId,
-    zoneColors: defaultZoneColors(zones),
+    ...initialColorways(defaultZoneColors(zones)),
     palette: [...DEFAULT_PALETTE],
     layers: []
   }
+}
+
+export function colorwayState(doc: DesignDocument): ColorwayState {
+  return { zoneColors: doc.zoneColors, colorways: doc.colorways, activeColorwayId: doc.activeColorwayId }
+}
+
+/** All colorways with the active one carrying the live part colors. */
+export function resolvedColorways(doc: DesignDocument): Colorway[] {
+  return doc.colorways.map((c) => (c.id === doc.activeColorwayId ? { ...c, zoneColors: doc.zoneColors } : c))
+}
+
+/** The document as it looks with another colorway active. */
+export function withColorway(doc: DesignDocument, colorwayId: string): DesignDocument {
+  const colorways = resolvedColorways(doc)
+  const target = colorways.find((c) => c.id === colorwayId)
+  if (!target) return doc
+  return { ...doc, colorways, activeColorwayId: target.id, zoneColors: target.zoneColors }
 }
 
 function insertAt<T>(items: T[], index: number, item: T): T[] {
@@ -121,6 +164,7 @@ export function applyOperation(doc: DesignDocument, op: Operation): DesignDocume
     case 'addPaletteColor':
       return { ...doc, palette: [...doc.palette, op.color] }
     case 'setTemplate':
+    case 'setColorways':
       return { ...doc, ...op.to }
     case 'addLayer':
       return { ...doc, layers: insertAt(doc.layers, op.index, op.layer) }
@@ -140,6 +184,7 @@ export function revertOperation(doc: DesignDocument, op: Operation): DesignDocum
     case 'addPaletteColor':
       return { ...doc, palette: doc.palette.slice(0, -1) }
     case 'setTemplate':
+    case 'setColorways':
       return { ...doc, ...op.from }
     case 'addLayer':
       return { ...doc, layers: removeAt(doc.layers, op.index) }
@@ -153,8 +198,8 @@ export function revertOperation(doc: DesignDocument, op: Operation): DesignDocum
 }
 
 /**
- * Consecutive `updateLayer` operations with the same `mergeKey` (one drag, one
- * text field edit) collapse into a single history entry.
+ * Consecutive operations with the same `mergeKey` (one drag, one text field
+ * edit) collapse into a single history entry.
  */
 function mergeWithLast(past: Operation[], op: Operation): Operation[] {
   const last = past.at(-1)
@@ -167,6 +212,9 @@ function mergeWithLast(past: Operation[], op: Operation): Operation[] {
   ) {
     const merged: Operation = { ...op, from: { ...op.from, ...last.from }, to: { ...last.to, ...op.to } }
     return [...past.slice(0, -1), merged]
+  }
+  if (op.type === 'setColorways' && op.mergeKey && last?.type === 'setColorways' && last.mergeKey === op.mergeKey) {
+    return [...past.slice(0, -1), { ...op, from: last.from }]
   }
   const next = [...past, op]
   if (next.length > HISTORY_LIMIT) next.shift()
