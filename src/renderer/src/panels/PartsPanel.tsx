@@ -1,16 +1,16 @@
-import { useEditor } from '../document/store'
-import { defaultTemplate } from '../templates'
+import { useCurrentTemplate, useEditor } from '../document/store'
 
 export function PartsPanel() {
+  const template = useCurrentTemplate()
   const zoneColors = useEditor((s) => s.doc.zoneColors)
   const selectedZoneId = useEditor((s) => s.selectedZoneId)
   const selectZone = useEditor((s) => s.selectZone)
 
   return (
-    <aside className="panel panel-left">
+    <section className="panel-section">
       <h2>Parts</h2>
       <ul className="parts-list">
-        {[...defaultTemplate.zones].reverse().map((zone) => (
+        {[...template.zones].reverse().map((zone) => (
           <li key={zone.id}>
             <button
               className={zone.id === selectedZoneId ? 'part selected' : 'part'}
@@ -22,6 +22,6 @@ export function PartsPanel() {
           </li>
         ))}
       </ul>
-    </aside>
+    </section>
   )
 }

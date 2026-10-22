@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import 'pixi.js/unsafe-eval'
 import { Application, Container, Graphics, GraphicsPath, type FederatedPointerEvent } from 'pixi.js'
 import { useEditor } from '../document/store'
-import { defaultTemplate } from '../templates'
+import { getTemplate } from '../templates'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 8
@@ -72,33 +72,43 @@ function buildScene(
   onZoom: (zoom: number) => void,
   viewportRef: RefObject<Viewport | null>
 ): () => void {
-  const template = defaultTemplate
   const world = new Container()
   app.stage.addChild(world)
 
+  let template = getTemplate(useEditor.getState().doc.templateId)
   const zoneGraphics = new Map<string, Graphics>()
-  for (const zone of template.zones) {
-    const g = new Graphics()
-    g.eventMode = 'static'
-    g.cursor = 'pointer'
-    g.on('pointertap', (e: FederatedPointerEvent) => {
-      e.stopPropagation()
-      useEditor.getState().selectZone(zone.id)
-    })
-    world.addChild(g)
-    zoneGraphics.set(zone.id, g)
-  }
-
-  if (template.printArea) {
-    const { x, y, width, height } = template.printArea
-    const printArea = new Graphics().rect(x, y, width, height).stroke({ width: 1, color: SELECTED_COLOR, alpha: 0.45 })
-    printArea.eventMode = 'none'
-    world.addChild(printArea)
-  }
-
   const selection = new Graphics()
   selection.eventMode = 'none'
-  world.addChild(selection)
+
+  const mountTemplate = () => {
+    for (const child of world.removeChildren()) {
+      if (child !== selection) child.destroy()
+    }
+    zoneGraphics.clear()
+
+    for (const zone of template.zones) {
+      const g = new Graphics()
+      g.eventMode = 'static'
+      g.cursor = 'pointer'
+      g.on('pointertap', (e: FederatedPointerEvent) => {
+        e.stopPropagation()
+        useEditor.getState().selectZone(zone.id)
+      })
+      world.addChild(g)
+      zoneGraphics.set(zone.id, g)
+    }
+
+    if (template.printArea) {
+      const { x, y, width, height } = template.printArea
+      const printArea = new Graphics()
+        .rect(x, y, width, height)
+        .stroke({ width: 1, color: SELECTED_COLOR, alpha: 0.45 })
+      printArea.eventMode = 'none'
+      world.addChild(printArea)
+    }
+
+    world.addChild(selection)
+  }
 
   const draw = () => {
     const { doc, selectedZoneId } = useEditor.getState()
@@ -114,10 +124,6 @@ function buildScene(
     const selected = template.zones.find((z) => z.id === selectedZoneId)
     if (selected) selection.path(new GraphicsPath(selected.path)).stroke({ width: 3, color: SELECTED_COLOR })
   }
-  draw()
-  const unsubscribe = useEditor.subscribe((s, prev) => {
-    if (s.doc.zoneColors !== prev.doc.zoneColors || s.selectedZoneId !== prev.selectedZoneId) draw()
-  })
 
   const setScale = (scale: number, anchorX: number, anchorY: number) => {
     const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale))
@@ -147,7 +153,21 @@ function buildScene(
     zoomBy: (factor) => setScale(world.scale.x * factor, app.screen.width / 2, app.screen.height / 2),
     fit
   }
+
+  mountTemplate()
+  draw()
   fit()
+
+  const unsubscribe = useEditor.subscribe((s, prev) => {
+    if (s.doc.templateId !== prev.doc.templateId) {
+      template = getTemplate(s.doc.templateId)
+      mountTemplate()
+      draw()
+      fit()
+    } else if (s.doc.zoneColors !== prev.doc.zoneColors || s.selectedZoneId !== prev.selectedZoneId) {
+      draw()
+    }
+  })
 
   const onWheel = (e: WheelEvent) => {
     e.preventDefault()

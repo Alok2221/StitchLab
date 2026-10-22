@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 300" data-template-id="slide-sandal-side" data-name="Slide sandal" data-category="footwear">
+  <path id="zone-strap" data-label="Strap" fill="#1f1f22"
+    d="M250 204 Q262 80 400 70 Q522 80 540 204 L500 204 Q490 122 400 112 Q302 122 290 204 Z" />
+  <path id="zone-sole" data-label="Sole" fill="#3b3f4a"
+    d="M40 232 Q40 200 80 200 L580 200 Q610 200 610 232 L610 250 Q610 270 580 270 L70 270 Q40 270 40 250 Z" />
+  <path id="zone-footbed" data-label="Footbed" fill="#c2a878"
+    d="M56 200 L596 200 L592 216 L60 216 Z" />
+</svg>

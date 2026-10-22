@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useEditor } from '../document/store'
-import { defaultTemplate } from '../templates'
+import { useCurrentTemplate, useEditor } from '../document/store'
 
 export function PalettePanel() {
+  const template = useCurrentTemplate()
   const palette = useEditor((s) => s.doc.palette)
   const selectedZoneId = useEditor((s) => s.selectedZoneId)
   const currentColor = useEditor((s) => (s.selectedZoneId ? s.doc.zoneColors[s.selectedZoneId] : undefined))
@@ -10,7 +10,7 @@ export function PalettePanel() {
   const addPaletteColor = useEditor((s) => s.addPaletteColor)
   const [newColor, setNewColor] = useState('#4f8cff')
 
-  const selectedLabel = defaultTemplate.zones.find((z) => z.id === selectedZoneId)?.label
+  const selectedLabel = template.zones.find((z) => z.id === selectedZoneId)?.label
 
   return (
     <aside className="panel panel-right">

@@ -4,8 +4,11 @@ Desktop app for designing clothing: start from a garment template, color its
 parts, add text, graphics and patterns, and export a production-ready design.
 2D editor first, 3D mannequin preview later.
 
-**Status:** early skeleton - editor window with one T-shirt template, per-part
-coloring, palette, undo / redo, pan and zoom.
+**Status:** early MVP - template library (T-shirt, hoodie, trousers, dress,
+tote bag, sneaker, Chelsea boot, slide sandal), per-part coloring, palette,
+undo / redo, pan and zoom.
+
+![StitchLab editor](docs/images/editor-templates.png)
 
 ## Running locally
 

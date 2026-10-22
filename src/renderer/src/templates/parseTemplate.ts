@@ -12,9 +12,14 @@ export interface Rect {
   height: number
 }
 
+export const TEMPLATE_CATEGORIES = ['tops', 'bottoms', 'dresses', 'bags', 'footwear'] as const
+
+export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number]
+
 export interface GarmentTemplate {
   id: string
   name: string
+  category: TemplateCategory
   viewBox: Rect
   zones: TemplateZone[]
   printArea: Rect | null
@@ -31,6 +36,11 @@ export function parseTemplate(svgSource: string): GarmentTemplate {
 
   const id = svg.getAttribute('data-template-id')
   if (!id) throw new Error('Garment template is missing data-template-id')
+
+  const category = svg.getAttribute('data-category') as TemplateCategory | null
+  if (!category || !TEMPLATE_CATEGORIES.includes(category)) {
+    throw new Error(`Garment template "${id}" has an unknown data-category: ${category}`)
+  }
 
   const [x, y, width, height] = (svg.getAttribute('viewBox') ?? '0 0 0 0').split(/[\s,]+/).map(Number)
 
@@ -54,6 +64,7 @@ export function parseTemplate(svgSource: string): GarmentTemplate {
   return {
     id,
     name: svg.getAttribute('data-name') ?? id,
+    category,
     viewBox: { x, y, width, height },
     zones,
     printArea

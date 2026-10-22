@@ -94,10 +94,16 @@ docs/
 
 A template is an SVG file with:
 
-- `data-template-id` and `data-name` on the root `<svg>`,
+- `data-template-id`, `data-name` and `data-category` (`tops`, `bottoms`,
+  `dresses`, `bags`, `footwear`) on the root `<svg>`,
 - one `<path id="zone-<name>" data-label="..." fill="...">` per colorable part;
   `fill` is the default color, document order is drawing order,
-- an optional `<rect id="print-area">` marking the printable area.
+- an optional `<rect id="print-area" fill="none">` marking the printable area.
+
+New templates are registered in `src/renderer/src/templates/index.ts`. The
+template tests check every registered file: unique ids, labeled zones, hex
+colors, drawable paths and a print area inside the viewBox. Footwear templates
+use a side view.
 
 PixiJS runs with `pixi.js/unsafe-eval` so the renderer keeps a strict
 Content Security Policy without `'unsafe-eval'`.

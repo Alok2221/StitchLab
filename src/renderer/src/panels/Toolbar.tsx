@@ -1,7 +1,7 @@
-import { useEditor } from '../document/store'
-import { defaultTemplate } from '../templates'
+import { useCurrentTemplate, useEditor } from '../document/store'
 
 export function Toolbar() {
+  const template = useCurrentTemplate()
   const canUndo = useEditor((s) => s.history.past.length > 0)
   const canRedo = useEditor((s) => s.history.future.length > 0)
   const undo = useEditor((s) => s.undo)
@@ -18,7 +18,7 @@ export function Toolbar() {
           Redo
         </button>
       </div>
-      <span className="toolbar-title">{defaultTemplate.name}</span>
+      <span className="toolbar-title">{template.name}</span>
     </header>
   )
 }
