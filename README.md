@@ -6,9 +6,20 @@ parts, add text, graphics and patterns, and export a production-ready design.
 
 **Status:** early MVP - template library (T-shirt, hoodie, trousers, dress,
 tote bag, sneaker, Chelsea boot, slide sandal), per-part coloring, palette,
-undo / redo, pan and zoom.
+text and image layers with move / scale / rotate and clipping to the garment
+or a single part, undo / redo, pan and zoom.
 
-![StitchLab editor](docs/images/editor-templates.png)
+![StitchLab editor with layers](docs/images/editor-layers.png)
+
+![Template library](docs/images/editor-templates.png)
+
+## Shortcuts
+
+- `Ctrl+Z` / `Ctrl+Shift+Z` or `Ctrl+Y` - undo / redo
+- Arrows (`Shift` for 10 units) - nudge the selected layer
+- `Delete` - remove the selected layer
+- `Shift` while rotating - snap to 15 degrees
+- `Esc` - clear selection
 
 ## Running locally
 

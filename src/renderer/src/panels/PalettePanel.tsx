@@ -1,21 +1,29 @@
 import { useState } from 'react'
-import { useCurrentTemplate, useEditor } from '../document/store'
+import { useCurrentTemplate, useEditor, useSelectedLayer } from '../document/store'
 
 export function PalettePanel() {
   const template = useCurrentTemplate()
   const palette = useEditor((s) => s.doc.palette)
+  const zoneColors = useEditor((s) => s.doc.zoneColors)
   const selectedZoneId = useEditor((s) => s.selectedZoneId)
-  const currentColor = useEditor((s) => (s.selectedZoneId ? s.doc.zoneColors[s.selectedZoneId] : undefined))
-  const setZoneColor = useEditor((s) => s.setZoneColor)
-  const addPaletteColor = useEditor((s) => s.addPaletteColor)
+  const { setZoneColor, addPaletteColor, updateLayer } = useEditor.getState()
+  const layer = useSelectedLayer()
   const [newColor, setNewColor] = useState('#4f8cff')
 
-  const selectedLabel = template.zones.find((z) => z.id === selectedZoneId)?.label
+  const textLayer = layer?.type === 'text' ? layer : undefined
+  const zone = template.zones.find((z) => z.id === selectedZoneId)
+  const target = textLayer ? textLayer.name : zone?.label
+  const currentColor = textLayer ? textLayer.fill : selectedZoneId ? zoneColors[selectedZoneId] : undefined
+
+  const apply = (color: string) => {
+    if (textLayer) updateLayer(textLayer.id, { fill: color })
+    else if (selectedZoneId) setZoneColor(selectedZoneId, color)
+  }
 
   return (
-    <aside className="panel panel-right">
+    <section className="panel-section">
       <h2>Palette</h2>
-      <p className="hint">{selectedLabel ? `Click a color to apply it to: ${selectedLabel}` : 'Select a part to color it'}</p>
+      <p className="hint">{target ? `Click a color to apply it to: ${target}` : 'Select a part or a text layer to color it'}</p>
       <div className="palette">
         {palette.map((color) => (
           <button
@@ -23,8 +31,8 @@ export function PalettePanel() {
             className={color === currentColor ? 'palette-swatch active' : 'palette-swatch'}
             style={{ background: color }}
             title={color}
-            disabled={!selectedZoneId}
-            onClick={() => selectedZoneId && setZoneColor(selectedZoneId, color)}
+            disabled={!target}
+            onClick={() => apply(color)}
           />
         ))}
       </div>
@@ -32,6 +40,6 @@ export function PalettePanel() {
         <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} />
         <button onClick={() => addPaletteColor(newColor)}>Add color</button>
       </div>
-    </aside>
+    </section>
   )
 }
