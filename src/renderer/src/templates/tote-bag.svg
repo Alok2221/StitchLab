@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 650" data-template-id="tote-bag" data-name="Tote bag" data-category="bags">
+  <path id="zone-handles" data-label="Handles" fill="#c2a878"
+    d="M150 200 L150 120 Q150 40 230 40 L290 40 Q370 40 370 120 L370 200 L340 200 L340 124 Q340 72 288 72 L232 72 Q180 72 180 124 L180 200 Z" />
+  <path id="zone-body" data-label="Body" fill="#efe6d2"
+    d="M90 190 L430 190 L450 610 L70 610 Z" />
+  <path id="zone-top-band" data-label="Top band" fill="#c2a878"
+    d="M90 190 L430 190 L432 230 L88 230 Z" />
+  <path id="zone-base" data-label="Base" fill="#c2a878"
+    d="M72 570 L448 570 L450 610 L70 610 Z" />
+  <rect id="print-area" x="150" y="270" width="220" height="250" fill="none" />
+</svg>

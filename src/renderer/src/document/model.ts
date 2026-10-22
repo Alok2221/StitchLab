@@ -4,9 +4,15 @@ export interface DesignDocument {
   palette: string[]
 }
 
+export interface GarmentState {
+  templateId: string
+  zoneColors: Record<string, string>
+}
+
 export type Operation =
   | { type: 'setZoneColor'; zoneId: string; from: string; to: string }
   | { type: 'addPaletteColor'; color: string }
+  | { type: 'setTemplate'; from: GarmentState; to: GarmentState }
 
 export interface History {
   past: Operation[]
@@ -26,13 +32,17 @@ export const DEFAULT_PALETTE = [
   '#e07a5f'
 ]
 
+export function defaultZoneColors(zones: { id: string; defaultColor: string }[]): Record<string, string> {
+  return Object.fromEntries(zones.map((z) => [z.id, z.defaultColor]))
+}
+
 export function createDocument(
   templateId: string,
   zones: { id: string; defaultColor: string }[]
 ): DesignDocument {
   return {
     templateId,
-    zoneColors: Object.fromEntries(zones.map((z) => [z.id, z.defaultColor])),
+    zoneColors: defaultZoneColors(zones),
     palette: [...DEFAULT_PALETTE]
   }
 }
@@ -43,6 +53,8 @@ export function applyOperation(doc: DesignDocument, op: Operation): DesignDocume
       return { ...doc, zoneColors: { ...doc.zoneColors, [op.zoneId]: op.to } }
     case 'addPaletteColor':
       return { ...doc, palette: [...doc.palette, op.color] }
+    case 'setTemplate':
+      return { ...doc, ...op.to }
   }
 }
 
@@ -52,6 +64,8 @@ export function revertOperation(doc: DesignDocument, op: Operation): DesignDocum
       return { ...doc, zoneColors: { ...doc.zoneColors, [op.zoneId]: op.from } }
     case 'addPaletteColor':
       return { ...doc, palette: doc.palette.slice(0, -1) }
+    case 'setTemplate':
+      return { ...doc, ...op.from }
   }
 }
 

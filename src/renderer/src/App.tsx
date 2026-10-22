@@ -5,6 +5,7 @@ import { PalettePanel } from './panels/PalettePanel'
 import { PartsPanel } from './panels/PartsPanel'
 import { Toolbar } from './panels/Toolbar'
 import { StatusBar } from './panels/StatusBar'
+import { TemplatesPanel } from './panels/TemplatesPanel'
 
 export function App() {
   useEffect(() => {
@@ -27,7 +28,10 @@ export function App() {
   return (
     <div className="app">
       <Toolbar />
-      <PartsPanel />
+      <aside className="panel panel-left">
+        <TemplatesPanel />
+        <PartsPanel />
+      </aside>
       <main className="workspace">
         <EditorCanvas />
       </main>

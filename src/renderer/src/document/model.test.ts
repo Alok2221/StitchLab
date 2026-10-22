@@ -45,6 +45,23 @@ describe('document model', () => {
     expect(state.history.past).toHaveLength(HISTORY_LIMIT)
   })
 
+  it('switches template and restores the previous garment on undo', () => {
+    const start = createDocument('tshirt-front', zones)
+    const recolored = commit(start, empty, { type: 'setZoneColor', zoneId: 'body', from: '#ffffff', to: '#c8102e' })
+    const switched = commit(recolored.doc, recolored.history, {
+      type: 'setTemplate',
+      from: { templateId: 'tshirt-front', zoneColors: recolored.doc.zoneColors },
+      to: { templateId: 'sneaker-side', zoneColors: { upper: '#f4f4f2', sole: '#3b3f4a' } }
+    })
+    expect(switched.doc.templateId).toBe('sneaker-side')
+    expect(switched.doc.zoneColors).toEqual({ upper: '#f4f4f2', sole: '#3b3f4a' })
+    expect(switched.doc.palette).toEqual(start.palette)
+
+    const undone = undo(switched.doc, switched.history)
+    expect(undone.doc.templateId).toBe('tshirt-front')
+    expect(undone.doc.zoneColors.body).toBe('#c8102e')
+  })
+
   it('does nothing when there is nothing to undo or redo', () => {
     const doc = createDocument('tshirt-front', zones)
     expect(undo(doc, empty).doc).toBe(doc)

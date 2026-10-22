@@ -1,9 +1,9 @@
-import { useEditor } from '../document/store'
-import { defaultTemplate } from '../templates'
+import { useCurrentTemplate, useEditor } from '../document/store'
 
 export function StatusBar() {
+  const template = useCurrentTemplate()
   const selectedZoneId = useEditor((s) => s.selectedZoneId)
-  const label = defaultTemplate.zones.find((z) => z.id === selectedZoneId)?.label ?? 'Nothing selected'
+  const label = template.zones.find((z) => z.id === selectedZoneId)?.label ?? 'Nothing selected'
   const versions = window.stitchlab?.versions
 
   return (
