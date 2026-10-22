@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { registerFileHandlers } from './files'
+import { confirmUnsavedOnClose, registerProjectHandlers } from './projects'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -21,6 +22,7 @@ function createWindow(): void {
   })
 
   win.once('ready-to-show', () => win.show())
+  confirmUnsavedOnClose(win)
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) void shell.openExternal(url)
@@ -37,6 +39,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   registerFileHandlers()
+  registerProjectHandlers()
   createWindow()
 
   app.on('activate', () => {

@@ -22,6 +22,13 @@ interface EditorState {
   history: History
   selectedZoneId: string | null
   selectedLayerId: string | null
+  /** Path of the open project file, or null for an unsaved project. */
+  filePath: string | null
+  /** Increments on every document change; compared with `savedRevision` to detect unsaved work. */
+  revision: number
+  savedRevision: number
+  loadDocument: (doc: DesignDocument, filePath: string | null, options?: { dirty?: boolean }) => void
+  markSaved: (filePath: string, revision: number) => void
   dispatch: (op: Operation) => void
   undo: () => void
   redo: () => void
@@ -65,27 +72,39 @@ export const useEditor = create<EditorState>((set, get) => {
     set({ selectedLayerId: layer.id, selectedZoneId: null })
   }
 
+  const applyHistoryStep = (s: EditorState, next: { doc: DesignDocument; history: History }) => ({
+    ...next,
+    ...keepValidSelection(next.doc, s),
+    revision: next.doc === s.doc ? s.revision : s.revision + 1
+  })
+
   return {
     doc: createDocument(defaultTemplate.id, defaultTemplate.zones),
     history: { past: [], future: [] },
     selectedZoneId: null,
     selectedLayerId: null,
+    filePath: null,
+    revision: 0,
+    savedRevision: 0,
 
-    dispatch: (op) =>
+    loadDocument: (doc, filePath, options = {}) =>
       set((s) => {
-        const next = commit(s.doc, s.history, op)
-        return { ...next, ...keepValidSelection(next.doc, s) }
+        const revision = s.revision + 1
+        return {
+          doc,
+          filePath,
+          history: { past: [], future: [] },
+          selectedZoneId: null,
+          selectedLayerId: null,
+          revision,
+          savedRevision: options.dirty ? -1 : revision
+        }
       }),
-    undo: () =>
-      set((s) => {
-        const next = undo(s.doc, s.history)
-        return { ...next, ...keepValidSelection(next.doc, s) }
-      }),
-    redo: () =>
-      set((s) => {
-        const next = redo(s.doc, s.history)
-        return { ...next, ...keepValidSelection(next.doc, s) }
-      }),
+    markSaved: (filePath, revision) => set({ filePath, savedRevision: revision }),
+
+    dispatch: (op) => set((s) => applyHistoryStep(s, commit(s.doc, s.history, op))),
+    undo: () => set((s) => applyHistoryStep(s, undo(s.doc, s.history))),
+    redo: () => set((s) => applyHistoryStep(s, redo(s.doc, s.history))),
     selectZone: (selectedZoneId) => set({ selectedZoneId, selectedLayerId: null }),
     selectLayer: (selectedLayerId) => set({ selectedLayerId, selectedZoneId: null }),
 
@@ -186,6 +205,8 @@ export const useEditor = create<EditorState>((set, get) => {
 export function useCurrentTemplate(): GarmentTemplate {
   return useEditor((s) => getTemplate(s.doc.templateId))
 }
+
+export const isDirty = (s: Pick<EditorState, 'revision' | 'savedRevision'>) => s.revision !== s.savedRevision
 
 export function useSelectedLayer(): Layer | undefined {
   return useEditor((s) => s.doc.layers.find((l) => l.id === s.selectedLayerId))

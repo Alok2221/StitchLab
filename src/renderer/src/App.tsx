@@ -8,6 +8,8 @@ import { PropertiesPanel } from './panels/PropertiesPanel'
 import { StatusBar } from './panels/StatusBar'
 import { TemplatesPanel } from './panels/TemplatesPanel'
 import { Toolbar } from './panels/Toolbar'
+import { RecoveryBanner } from './panels/RecoveryBanner'
+import { useProjectLifecycle } from './project/useProjectLifecycle'
 
 const NUDGE = 1
 const NUDGE_LARGE = 10
@@ -25,6 +27,8 @@ function isEditingText(target: EventTarget | null): boolean {
 }
 
 export function App() {
+  const { recovery, dismissRecovery } = useProjectLifecycle()
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (isEditingText(e.target)) return
@@ -73,6 +77,7 @@ export function App() {
       </aside>
       <main className="workspace">
         <EditorCanvas />
+        {recovery && <RecoveryBanner recovery={recovery} onDone={dismissRecovery} />}
       </main>
       <aside className="panel panel-right">
         <LayersPanel />

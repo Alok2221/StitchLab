@@ -9,7 +9,9 @@ tote bag, sneaker, Chelsea boot, slide sandal), per-part coloring, palette,
 text and image layers with move / scale / rotate and clipping to the garment
 or a single part, undo / redo, pan and zoom, and export to PNG (1x-8x,
 transparent or white background), SVG (editable vector) and PDF (A4 sheet with
-the design, part colors and a layer list).
+the design, part colors and a layer list). Projects are saved as `.stitch` files,
+and unsaved work is autosaved to a recovery file that is offered on the next
+start after a crash.
 
 ![StitchLab editor with layers](docs/images/editor-layers.png)
 
@@ -18,6 +20,8 @@ the design, part colors and a layer list).
 ## Shortcuts
 
 - `Ctrl+Z` / `Ctrl+Shift+Z` or `Ctrl+Y` - undo / redo
+- `Ctrl+N` / `Ctrl+O` - new / open project
+- `Ctrl+S` / `Ctrl+Shift+S` - save / save as
 - `Ctrl+E` - export
 - Arrows (`Shift` for 10 units) - nudge the selected layer
 - `Delete` - remove the selected layer
