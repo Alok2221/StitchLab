@@ -59,6 +59,22 @@ process.
 
 ---
 
+## Export pipeline
+
+The SVG generated from the document model (`src/renderer/src/export/svg.ts`) is
+the single source for every format:
+
+- **SVG** - written as is; garment parts are `<path>` elements, layers keep their
+  transforms and clip paths.
+- **PNG** - the SVG is rasterized by Chromium onto a canvas at the chosen scale.
+- **PDF** - pdf-lib builds an A4 sheet with a 2400 px render of the design and a
+  spec: part colors with HEX values and the layer list. Standard PDF fonts only
+  support WinAnsi, so non-Latin text in the spec is transliterated.
+
+The renderer never touches the file system; it sends the bytes to the main
+process (`file:save` IPC), which shows the save dialog, validates the request
+and writes the file.
+
 ## Project file format
 
 A `.stitch` file is a zip archive:
