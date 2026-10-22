@@ -218,15 +218,24 @@ button.primary:hover:not(:disabled) {
   border-top: 1px solid var(--border);
 }
 
-.template-group + .template-group {
-  margin-top: 10px;
+.category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
-.template-group h3 {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 500;
+.category-tabs button {
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 999px;
   color: var(--muted);
+}
+
+.category-tabs button.selected {
+  border-color: var(--accent);
+  background: #2d3447;
+  color: inherit;
 }
 
 .template-grid {
