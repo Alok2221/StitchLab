@@ -77,14 +77,27 @@ and writes the file.
 
 ## Project file format
 
-A `.stitch` file is a zip archive:
+A `.stitch` file is a zip archive (fflate):
 
 ```
-project.json      document model (garments, layers, palette, operations log)
-assets/           imported images and SVGs
-versions/         named snapshots
-thumbnail.png     preview for the file browser
+project.json      { format: "stitchlab-project", version, savedAt, document }
+assets/           imported images, named by content hash, stored once
+thumbnail.png     256 px preview
+versions/         named snapshots (planned)
 ```
+
+`project.json` holds the template id, part colors, palette and layers; image
+layers reference `assets/<hash>.<ext>` instead of embedding data. Loading
+validates every field, rejects files from newer format versions and fills in
+parts added to a template after the file was saved.
+
+The main process only writes project files to paths the user picked in a
+dialog during the session, and saves through a temporary file and a rename.
+
+**Recovery** - 1.5 s after each change the renderer writes the document to
+`<userData>/recovery/`. On startup a leftover recovery file is offered for
+restore; saving, opening, starting a new project or closing without saving
+clears it.
 
 ---
 

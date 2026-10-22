@@ -25,6 +25,10 @@ const byId = new Map(templates.map((t) => [t.id, t]))
 
 export const defaultTemplate = templates[0]
 
+export function hasTemplate(id: string): boolean {
+  return byId.has(id)
+}
+
 export function getTemplate(id: string): GarmentTemplate {
   return byId.get(id) ?? defaultTemplate
 }

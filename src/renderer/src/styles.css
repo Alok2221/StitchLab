@@ -108,6 +108,27 @@ h2 {
   color: #7ccf9a;
 }
 
+.notice.error {
+  color: #ff8a8a;
+}
+
+.recovery-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 8px 10px 8px 14px;
+  background: #2d3447;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
