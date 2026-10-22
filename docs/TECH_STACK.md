@@ -71,9 +71,16 @@ the single source for every format:
   spec: part colors with HEX values and the layer list. Standard PDF fonts only
   support WinAnsi, so non-Latin text in the spec is transliterated.
 
-**Colorways** - the document keeps a list of colorways (name and part colors)
-and the id of the active one; `zoneColors` holds the live colors of the active
-colorway. Exporting all colorways renders the same SVG once per colorway: PNG
+**Colorways** - the document keeps a list of colorways (name, part colors and
+part patterns) and the id of the active one; `zoneColors` and `zonePatterns`
+hold the live fills of the active colorway.
+
+**Patterns** - a part can have a repeating pattern (stripes, checks, dots, grid
+or an image) drawn over its base color. Each pattern is defined once as an SVG
+tile in template units (`src/renderer/src/document/patterns.ts`). Export puts
+the tile into an SVG `<pattern>` with `patternTransform` for size and angle; the
+canvas rasterizes the same tile into a Pixi texture and applies the same
+transform through the fill matrix, so the editor and the export match. Exporting all colorways renders the same SVG once per colorway: PNG
 and SVG become one file each, the PDF gets an overview page with every
 colorway followed by one spec sheet per colorway.
 
@@ -93,11 +100,12 @@ thumbnail.png     256 px preview
 versions/         named snapshots (planned)
 ```
 
-`project.json` holds the template id, part colors, colorways, palette and
-layers; image layers reference `assets/<hash>.<ext>` instead of embedding data.
-Loading validates every field, rejects files from newer format versions and
-fills in parts added to a template after the file was saved. Format version 2
-added colorways; version 1 files open with a single colorway.
+`project.json` holds the template id, part colors and patterns, colorways,
+palette and layers; image layers and image patterns reference
+`assets/<hash>.<ext>` instead of embedding data. Loading validates every field,
+rejects files from newer format versions and fills in parts added to a template
+after the file was saved. Format version 2 added colorways and version 3 part
+patterns; older files open with a single colorway and no patterns.
 
 The main process only writes project files to paths the user picked in a
 dialog during the session, and saves through a temporary file and a rename.

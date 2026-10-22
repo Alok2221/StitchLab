@@ -550,6 +550,22 @@ button.danger {
   background: transparent;
 }
 
+.pattern-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.pattern-kinds button {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.pattern-kinds button.selected {
+  border-color: var(--accent);
+  background: #2d3447;
+}
+
 .field input[type='range'] {
   width: 100%;
   accent-color: var(--accent);

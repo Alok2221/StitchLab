@@ -6,7 +6,8 @@ import {
   resolvedColorways,
   type DesignDocument,
   type ImageLayer,
-  type TextLayer
+  type TextLayer,
+  type ZonePattern
 } from '../document/model'
 import { parseProject, ProjectFormatError, serializeProject } from './format'
 
@@ -47,10 +48,12 @@ function sampleDoc(): DesignDocument {
     { id: 'hood', defaultColor: '#3b3f4a' }
   ])
   const navy = { body: '#1f2a44', hood: '#ffffff' }
+  const logoPattern: ZonePattern = { kind: 'image', src: PNG_DATA_URL, width: 1, height: 1, scale: 2, angle: 30 }
   return {
     ...doc,
     zoneColors: { ...doc.zoneColors, body: '#c8102e' },
-    colorways: [...doc.colorways, { id: 'navy', name: 'Navy', zoneColors: navy }],
+    zonePatterns: { body: { kind: 'stripes', color: '#ffffff', scale: 1.5, angle: 45 } },
+    colorways: [...doc.colorways, { id: 'navy', name: 'Navy', zoneColors: navy, zonePatterns: { hood: logoPattern } }],
     layers: [text, image('i1'), image('i2')]
   }
 }
@@ -70,6 +73,34 @@ describe('project file format', () => {
     expect(loaded.doc).toEqual({ ...doc, colorways: resolvedColorways(doc) })
     expect(loaded.doc.colorways[0].zoneColors.body).toBe('#c8102e')
     expect(loaded.doc.colorways[1].name).toBe('Navy')
+    expect(loaded.doc.colorways[0].zonePatterns.body.kind).toBe('stripes')
+    expect(loaded.doc.colorways[1].zonePatterns.hood).toMatchObject({ kind: 'image', src: PNG_DATA_URL })
+  })
+
+  it('opens version 2 files without patterns', async () => {
+    const data = rezip(await serializeProject(sampleDoc()), (json) => {
+      json.version = 2
+      const document = json.document as { zonePatterns?: unknown; colorways: { zonePatterns?: unknown }[] }
+      delete document.zonePatterns
+      for (const c of document.colorways) delete c.zonePatterns
+    })
+    const { doc } = parseProject(data)
+    expect(doc.zonePatterns).toEqual({})
+    expect(doc.colorways.every((c) => Object.keys(c.zonePatterns).length === 0)).toBe(true)
+  })
+
+  it('rejects invalid patterns', async () => {
+    const data = await serializeProject(sampleDoc())
+    const badKind = rezip(data, (json) => {
+      ;(json.document as { zonePatterns: Record<string, { kind: string }> }).zonePatterns.body.kind = 'plaid'
+    })
+    expect(() => parseProject(badKind)).toThrow('unknown kind')
+
+    const missingAsset = rezip(data, (json) => {
+      const colorways = (json.document as { colorways: { zonePatterns: Record<string, { asset: string }> }[] }).colorways
+      colorways[1].zonePatterns.hood.asset = 'assets/missing.png'
+    })
+    expect(() => parseProject(missingAsset)).toThrow('is missing')
   })
 
   it('opens version 1 files with a single colorway', async () => {
@@ -80,7 +111,9 @@ describe('project file format', () => {
       delete document.activeColorwayId
     })
     const { doc } = parseProject(data)
-    expect(doc.colorways).toEqual([{ id: 'colorway-1', name: 'Colorway 1', zoneColors: doc.zoneColors }])
+    expect(doc.colorways).toEqual([
+      { id: 'colorway-1', name: 'Colorway 1', zoneColors: doc.zoneColors, zonePatterns: doc.zonePatterns }
+    ])
     expect(doc.activeColorwayId).toBe('colorway-1')
     expect(doc.zoneColors.body).toBe('#c8102e')
   })
@@ -111,7 +144,7 @@ describe('project file format', () => {
 
     const json = JSON.parse(strFromU8(files['project.json']))
     expect(json.format).toBe('stitchlab-project')
-    expect(json.version).toBe(2)
+    expect(json.version).toBe(3)
     expect(JSON.stringify(json)).not.toContain('data:image')
   })
 

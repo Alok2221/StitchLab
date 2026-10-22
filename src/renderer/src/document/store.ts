@@ -15,7 +15,8 @@ import {
   type Layer,
   type LayerPatch,
   type Operation,
-  type TextLayer
+  type TextLayer,
+  type ZonePattern
 } from './model'
 
 interface EditorState {
@@ -43,6 +44,7 @@ interface EditorState {
   updateLayer: (id: string, patch: LayerPatch, mergeKey?: string) => void
   removeLayer: (id: string) => void
   moveLayer: (id: string, direction: 'up' | 'down') => void
+  setZonePattern: (zoneId: string, pattern: ZonePattern | null, mergeKey?: string) => void
   addColorway: () => void
   switchColorway: (id: string) => void
   renameColorway: (id: string, name: string) => void
@@ -133,6 +135,12 @@ export const useEditor = create<EditorState>((set, get) => {
         from: { templateId: doc.templateId, ...colorwayState(doc) },
         to: { templateId: template.id, ...remapColorways(doc, template.zones) }
       })
+    },
+
+    setZonePattern: (zoneId, pattern, mergeKey) => {
+      const from = get().doc.zonePatterns[zoneId] ?? null
+      if (from === pattern) return
+      get().dispatch({ type: 'setZonePattern', zoneId, from, to: pattern, mergeKey })
     },
 
     addColorway: () => {

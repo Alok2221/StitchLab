@@ -44,7 +44,14 @@ async function renderSheet(doc: DesignDocument, template: GarmentTemplate, color
     scale
   })
   const size = exportSize(template, scale)
-  return { name: named ? colorway.name : null, zoneColors: colorway.zoneColors, png, pngWidth: size.width, pngHeight: size.height }
+  return {
+    name: named ? colorway.name : null,
+    zoneColors: colorway.zoneColors,
+    zonePatterns: colorway.zonePatterns,
+    png,
+    pngWidth: size.width,
+    pngHeight: size.height
+  }
 }
 
 /** Renders the design as it currently looks (active colorway) to PNG or SVG. */

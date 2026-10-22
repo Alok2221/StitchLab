@@ -23,7 +23,7 @@ function twoColorways() {
 describe('colorways', () => {
   it('starts with one colorway holding the template colors', () => {
     const doc = createDocument('tshirt-front', zones)
-    expect(doc.colorways).toEqual([{ id: 'colorway-1', name: 'Colorway 1', zoneColors: doc.zoneColors }])
+    expect(doc.colorways).toEqual([{ id: 'colorway-1', name: 'Colorway 1', zoneColors: doc.zoneColors, zonePatterns: {} }])
     expect(doc.activeColorwayId).toBe('colorway-1')
   })
 
@@ -64,6 +64,24 @@ describe('colorways', () => {
     expect(removeColorway(removed, 'colorway-1')).toBeNull()
   })
 
+  it('keeps patterns per colorway', () => {
+    const stripes = { kind: 'stripes' as const, color: '#000000', scale: 1, angle: 0 }
+    let doc = twoColorways()
+    doc = { ...doc, zonePatterns: { body: stripes } }
+    const first = apply(doc, switchColorway(doc, 'colorway-1'))
+    expect(first.zonePatterns).toEqual({})
+    const back = apply(first, switchColorway(first, 'red'))
+    expect(back.zonePatterns).toEqual({ body: stripes })
+    expect(apply(back, addColorway(back, 'copy')).zonePatterns).toEqual({ body: stripes })
+  })
+
+  it('drops patterns of parts the new template does not have', () => {
+    const dots = { kind: 'dots' as const, color: '#000000', scale: 1, angle: 0 }
+    const doc = { ...twoColorways(), zonePatterns: { body: dots, collar: dots } }
+    const remapped = remapColorways(doc, [{ id: 'body', defaultColor: '#333333' }])
+    expect(remapped.zonePatterns).toEqual({ body: dots })
+  })
+
   it('remaps colorways to a new template by part id', () => {
     const doc = twoColorways()
     const remapped = remapColorways(doc, [
@@ -91,6 +109,6 @@ describe('colorways', () => {
   })
 
   it('names new colorways without collisions', () => {
-    expect(nextColorwayName([{ id: 'a', name: 'Colorway 2', zoneColors: {} }])).toBe('Colorway 3')
+    expect(nextColorwayName([{ id: 'a', name: 'Colorway 2', zoneColors: {}, zonePatterns: {} }])).toBe('Colorway 3')
   })
 })

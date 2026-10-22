@@ -1,18 +1,24 @@
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate'
 import {
   initialColorways,
+  PATTERN_KINDS,
   resolvedColorways,
   type Colorway,
   type ColorwayState,
   type DesignDocument,
+  type GeometricPattern,
   type ImageLayer,
+  type ImagePattern,
   type Layer,
-  type TextLayer
+  type TextLayer,
+  type ZoneFills,
+  type ZonePattern
 } from '../document/model'
+import { clampPatternScale } from '../document/patterns'
 
 export const PROJECT_FORMAT = 'stitchlab-project'
-/** v2 added colorways; v1 files load with a single colorway. */
-export const PROJECT_VERSION = 2
+/** v2 added colorways, v3 part patterns; older files still load. */
+export const PROJECT_VERSION = 3
 
 const PROJECT_JSON = 'project.json'
 const THUMBNAIL = 'thumbnail.png'
@@ -37,12 +43,18 @@ export class ProjectFormatError extends Error {
 
 type StoredImageLayer = Omit<ImageLayer, 'src'> & { asset: string }
 type StoredLayer = TextLayer | StoredImageLayer
+type StoredPattern = GeometricPattern | (Omit<ImagePattern, 'src'> & { asset: string })
+type StoredPatterns = Record<string, StoredPattern>
 
 interface ProjectJson {
   format: typeof PROJECT_FORMAT
   version: number
   savedAt: string
-  document: Omit<DesignDocument, 'layers'> & { layers: StoredLayer[] }
+  document: Omit<DesignDocument, 'layers' | 'zonePatterns' | 'colorways'> & {
+    zonePatterns: StoredPatterns
+    colorways: (Omit<Colorway, 'zonePatterns'> & { zonePatterns: StoredPatterns })[]
+    layers: StoredLayer[]
+  }
 }
 
 // --- data URLs ---------------------------------------------------------------
@@ -80,23 +92,45 @@ export async function serializeProject(
   const files: Zippable = {}
   const assetsBySrc = new Map<string, string>()
 
+  const storeAsset = async (src: string) => {
+    let asset = assetsBySrc.get(src)
+    if (!asset) {
+      const { mime, bytes } = decodeDataUrl(src)
+      const extension = MIME_EXTENSIONS[mime]
+      if (!extension) throw new ProjectFormatError(`Unsupported image type: ${mime}`)
+      asset = `${ASSETS_DIR}${await contentHash(bytes)}.${extension}`
+      files[asset] = [bytes, { level: 0 }]
+      assetsBySrc.set(src, asset)
+    }
+    return asset
+  }
+
+  const storePatterns = async (patterns: Record<string, ZonePattern>) => {
+    const stored: StoredPatterns = {}
+    for (const [zoneId, pattern] of Object.entries(patterns)) {
+      if (pattern.kind !== 'image') {
+        stored[zoneId] = pattern
+        continue
+      }
+      const { src, ...rest } = pattern
+      stored[zoneId] = { ...rest, asset: await storeAsset(src) }
+    }
+    return stored
+  }
+
   const layers: StoredLayer[] = []
   for (const layer of doc.layers) {
     if (layer.type === 'text') {
       layers.push(layer)
       continue
     }
-    let asset = assetsBySrc.get(layer.src)
-    if (!asset) {
-      const { mime, bytes } = decodeDataUrl(layer.src)
-      const extension = MIME_EXTENSIONS[mime]
-      if (!extension) throw new ProjectFormatError(`Unsupported image type: ${mime}`)
-      asset = `${ASSETS_DIR}${await contentHash(bytes)}.${extension}`
-      files[asset] = [bytes, { level: 0 }]
-      assetsBySrc.set(layer.src, asset)
-    }
-    const { src: _src, ...rest } = layer
-    layers.push({ ...rest, asset })
+    const { src, ...rest } = layer
+    layers.push({ ...rest, asset: await storeAsset(src) })
+  }
+
+  const colorways: ProjectJson['document']['colorways'] = []
+  for (const colorway of resolvedColorways(doc)) {
+    colorways.push({ ...colorway, zonePatterns: await storePatterns(colorway.zonePatterns) })
   }
 
   const json: ProjectJson = {
@@ -106,7 +140,8 @@ export async function serializeProject(
     document: {
       templateId: doc.templateId,
       zoneColors: doc.zoneColors,
-      colorways: resolvedColorways(doc),
+      zonePatterns: await storePatterns(doc.zonePatterns),
+      colorways,
       activeColorwayId: doc.activeColorwayId,
       palette: doc.palette,
       layers
@@ -172,18 +207,13 @@ function readLayer(raw: unknown, index: number, files: Record<string, Uint8Array
   }
 
   if (raw.type === 'image') {
-    if (!isString(raw.asset) || !raw.asset.startsWith(ASSETS_DIR)) fail(`image layer ${index + 1} has no asset`)
     if (!isNumber(raw.width) || !isNumber(raw.height) || raw.width <= 0 || raw.height <= 0) {
       fail(`image layer ${index + 1} has an invalid size`)
     }
-    const bytes = files[raw.asset]
-    if (!bytes) fail(`asset ${raw.asset} is missing`)
-    const mime = EXTENSION_MIMES[raw.asset.split('.').pop() ?? '']
-    if (!mime) fail(`asset ${raw.asset} has an unsupported type`)
     return {
       ...base,
       type: 'image',
-      src: `data:${mime};base64,${bytesToBase64(bytes)}`,
+      src: readAsset(raw.asset, `image layer ${index + 1}`, files),
       width: raw.width,
       height: raw.height
     }
@@ -192,23 +222,59 @@ function readLayer(raw: unknown, index: number, files: Record<string, Uint8Array
   fail(`layer ${index + 1} has an unknown type`)
 }
 
-function readColorways(raw: Record<string, unknown>, zoneColors: Record<string, string>): ColorwayState {
+function readAsset(asset: unknown, where: string, files: Record<string, Uint8Array>): string {
+  if (!isString(asset) || !asset.startsWith(ASSETS_DIR)) fail(`${where} has no asset`)
+  const bytes = files[asset]
+  if (!bytes) fail(`asset ${asset} is missing`)
+  const mime = EXTENSION_MIMES[asset.split('.').pop() ?? '']
+  if (!mime) fail(`asset ${asset} has an unsupported type`)
+  return `data:${mime};base64,${bytesToBase64(bytes)}`
+}
+
+/** Resolves an asset path to an image data URL. */
+type AssetReader = (asset: unknown, where: string) => string
+
+function readPattern(raw: unknown, where: string, readImage: AssetReader): ZonePattern {
+  if (!isObject(raw) || !isNumber(raw.scale) || !isNumber(raw.angle)) fail(`${where} is invalid`)
+  const base = { scale: clampPatternScale(raw.scale), angle: raw.angle % 360 }
+  if (raw.kind === 'image') {
+    if (!isNumber(raw.width) || !isNumber(raw.height) || raw.width <= 0 || raw.height <= 0) {
+      fail(`${where} has an invalid size`)
+    }
+    return { ...base, kind: 'image', src: readImage(raw.asset, where), width: raw.width, height: raw.height }
+  }
+  const kind = PATTERN_KINDS.find((k) => k === raw.kind)
+  if (!kind || kind === 'image') fail(`${where} has an unknown kind`)
+  if (!isColor(raw.color)) fail(`${where} has an invalid color`)
+  return { ...base, kind, color: raw.color }
+}
+
+function readPatterns(raw: unknown, where: string, readImage: AssetReader): Record<string, ZonePattern> {
+  if (!isObject(raw)) fail(`${where} has invalid patterns`)
+  return Object.fromEntries(
+    Object.entries(raw).map(([zoneId, p]) => [zoneId, readPattern(p, `${where} pattern on ${zoneId}`, readImage)])
+  )
+}
+
+function readColorways(raw: Record<string, unknown>, fills: ZoneFills, version: number, readImage: AssetReader): ColorwayState {
   if (!Array.isArray(raw.colorways) || raw.colorways.length === 0 || raw.colorways.length > MAX_COLORWAYS) {
     fail('invalid colorways')
   }
   const colorways: Colorway[] = raw.colorways.map((c, i) => {
-    if (!isObject(c) || !isString(c.id) || !c.id || !isString(c.name)) fail(`colorway ${i + 1} is invalid`)
+    const where = `colorway ${i + 1}`
+    if (!isObject(c) || !isString(c.id) || !c.id || !isString(c.name)) fail(`${where} is invalid`)
     if (!isObject(c.zoneColors) || !Object.values(c.zoneColors).every(isColor)) {
-      fail(`colorway ${i + 1} has invalid part colors`)
+      fail(`${where} has invalid part colors`)
     }
-    return { id: c.id, name: c.name, zoneColors: c.zoneColors as Record<string, string> }
+    const zonePatterns = c.zonePatterns === undefined && version < 3 ? {} : readPatterns(c.zonePatterns, where, readImage)
+    return { id: c.id, name: c.name, zoneColors: c.zoneColors as Record<string, string>, zonePatterns }
   })
   if (new Set(colorways.map((c) => c.id)).size !== colorways.length) fail('duplicate colorway ids')
   const active = colorways.find((c) => c.id === raw.activeColorwayId)
   if (!active) fail('unknown active colorway')
   return {
-    zoneColors,
-    colorways: colorways.map((c) => (c.id === active.id ? { ...c, zoneColors } : c)),
+    ...fills,
+    colorways: colorways.map((c) => (c.id === active.id ? { ...c, ...fills } : c)),
     activeColorwayId: active.id
   }
 }
@@ -250,8 +316,26 @@ export function parseProject(data: Uint8Array): LoadedProject {
   const layers = raw.layers.map((layer, i) => readLayer(layer, i, files))
   if (new Set(layers.map((l) => l.id)).size !== layers.length) fail('duplicate layer ids')
 
-  const zoneColors = raw.zoneColors as Record<string, string>
-  const colorways = raw.colorways === undefined && json.version < 2 ? initialColorways(zoneColors) : readColorways(raw, zoneColors)
+  const decoded = new Map<string, string>()
+  const readImage: AssetReader = (asset, where) => {
+    const key = String(asset)
+    let src = decoded.get(key)
+    if (!src) {
+      src = readAsset(asset, where, files)
+      decoded.set(key, src)
+    }
+    return src
+  }
+
+  const version = json.version
+  const fills: ZoneFills = {
+    zoneColors: raw.zoneColors as Record<string, string>,
+    zonePatterns: raw.zonePatterns === undefined && version < 3 ? {} : readPatterns(raw.zonePatterns, 'document', readImage)
+  }
+  const colorways =
+    raw.colorways === undefined && version < 2
+      ? initialColorways(fills.zoneColors, fills.zonePatterns)
+      : readColorways(raw, fills, version, readImage)
 
   return {
     doc: {

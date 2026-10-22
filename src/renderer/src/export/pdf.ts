@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
-import { CLIP_GARMENT, CLIP_NONE, zoneClip, type DesignDocument, type Layer } from '../document/model'
+import { CLIP_GARMENT, CLIP_NONE, zoneClip, type DesignDocument, type Layer, type ZonePattern } from '../document/model'
+import { describePattern } from '../document/patterns'
 import type { GarmentTemplate } from '../templates/parseTemplate'
 
 const PAGE_WIDTH = 595.28
@@ -55,6 +56,7 @@ export interface PdfSheet {
   /** Colorway name; omitted when the design has a single colorway. */
   name: string | null
   zoneColors: Record<string, string>
+  zonePatterns: Record<string, ZonePattern>
   png: Uint8Array
   pngWidth: number
   pngHeight: number
@@ -168,6 +170,19 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
       write(color.toUpperCase(), x + columnWidth - 80, 10, regular, MUTED_COLOR)
       if (column === 1 || i === template.zones.length - 1) y -= ROW_HEIGHT
     })
+
+    const patterned = template.zones.filter((zone) => sheet.zonePatterns[zone.id])
+    if (patterned.length > 0) {
+      y -= 14
+      ensureSpace(ROW_HEIGHT * 2)
+      write('Patterns', MARGIN, 13, bold)
+      y -= ROW_HEIGHT + 2
+      for (const zone of patterned) {
+        ensureSpace(ROW_HEIGHT)
+        write(`${zone.label} - ${describePattern(sheet.zonePatterns[zone.id])}`, MARGIN, 10, regular, TEXT_COLOR, contentWidth)
+        y -= ROW_HEIGHT
+      }
+    }
 
     y -= 14
     ensureSpace(ROW_HEIGHT * 2)
