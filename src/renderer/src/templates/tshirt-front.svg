@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 640" data-template-id="tshirt-front" data-name="T-shirt (front)">
+  <path id="zone-sleeve-left" data-label="Left sleeve" fill="#f4f4f2"
+    d="M168 92 L62 168 Q54 176 60 186 L104 252 Q110 260 120 256 L176 222 Z" />
+  <path id="zone-sleeve-right" data-label="Right sleeve" fill="#f4f4f2"
+    d="M432 92 L538 168 Q546 176 540 186 L496 252 Q490 260 480 256 L424 222 Z" />
+  <path id="zone-body" data-label="Body" fill="#f4f4f2"
+    d="M236 58 Q300 112 364 58 L432 92 L424 222 Q428 410 440 598 Q300 618 160 598 Q172 410 176 222 L168 92 Z" />
+  <path id="zone-collar" data-label="Collar" fill="#d9d9d4"
+    d="M236 58 Q300 112 364 58 L378 66 Q300 132 222 66 Z" />
+  <rect id="print-area" x="220" y="150" width="160" height="210" />
+</svg>

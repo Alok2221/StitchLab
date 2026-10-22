@@ -72,16 +72,32 @@ thumbnail.png     preview for the file browser
 
 ---
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 src/
-  main/           Electron main process
-  preload/        IPC bridge
-  renderer/       React app
-    canvas/       PixiJS editor
-    preview3d/    Three.js preview
-    document/     document model and operations
-templates/        garment SVG templates
+  main/             Electron main process
+  preload/          IPC bridge
+  shared/           types shared between processes
+  renderer/
+    index.html
+    src/
+      canvas/       PixiJS editor
+      document/     document model, operations, store
+      panels/       React UI around the canvas
+      templates/    garment SVG templates and parser
+      preview3d/    Three.js preview (planned)
 docs/
 ```
+
+## Garment template format
+
+A template is an SVG file with:
+
+- `data-template-id` and `data-name` on the root `<svg>`,
+- one `<path id="zone-<name>" data-label="..." fill="...">` per colorable part;
+  `fill` is the default color, document order is drawing order,
+- an optional `<rect id="print-area">` marking the printable area.
+
+PixiJS runs with `pixi.js/unsafe-eval` so the renderer keeps a strict
+Content Security Policy without `'unsafe-eval'`.
