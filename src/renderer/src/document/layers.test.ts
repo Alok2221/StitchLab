@@ -4,8 +4,10 @@ import {
   commit,
   createDocument,
   initialColorways,
+  layerViews,
   pickLayerValues,
   redo,
+  remapLayerViews,
   undo,
   type History,
   type TextLayer
@@ -18,6 +20,7 @@ function textLayer(id: string): TextLayer {
     id,
     type: 'text',
     name: id,
+    view: 'front',
     x: 100,
     y: 100,
     rotation: 0,
@@ -35,7 +38,7 @@ function textLayer(id: string): TextLayer {
 }
 
 function withLayers(...ids: string[]) {
-  let state = { doc: createDocument('tshirt-front', [{ id: 'body', defaultColor: '#ffffff' }]), history: empty }
+  let state = { doc: createDocument('tshirt', [{ id: 'body', defaultColor: '#ffffff' }]), history: empty }
   ids.forEach((id, index) => {
     state = commit(state.doc, state.history, { type: 'addLayer', layer: textLayer(id), index })
   })
@@ -105,9 +108,27 @@ describe('layer operations', () => {
     const state = withLayers('a')
     const switched = commit(state.doc, state.history, {
       type: 'setTemplate',
-      from: { templateId: 'tshirt-front', ...initialColorways(state.doc.zoneColors) },
-      to: { templateId: 'hoodie-front', ...initialColorways({ body: '#333333' }) }
+      from: { templateId: 'tshirt', layerViews: { a: 'front' }, ...initialColorways(state.doc.zoneColors) },
+      to: { templateId: 'hoodie', layerViews: { a: 'front' }, ...initialColorways({ body: '#333333' }) }
     })
     expect(switched.doc.layers.map((l) => l.id)).toEqual(['a'])
+  })
+
+  it('moves layers to the matching view of another garment and back on undo', () => {
+    const state = withLayers('a', 'b', 'c')
+    const layers = state.doc.layers.map((l, i) => ({ ...l, view: ['front', 'back', 'side'][i] }))
+    const to = remapLayerViews(layers, ['front', 'back'], ['outer', 'inner'])
+    expect(to).toEqual({ a: 'outer', b: 'inner', c: 'outer' })
+    expect(remapLayerViews(layers, ['front', 'back'], ['front', 'back', 'top'])).toEqual({ a: 'front', b: 'back', c: 'front' })
+    expect(remapLayerViews(layers, ['front', 'back', 'side'], ['front', 'back', 'side'])).toEqual(layerViews(layers))
+
+    const doc = { ...state.doc, layers }
+    const switched = commit(doc, empty, {
+      type: 'setTemplate',
+      from: { templateId: 'tshirt', layerViews: layerViews(layers), ...initialColorways(doc.zoneColors) },
+      to: { templateId: 'sneaker', layerViews: to, ...initialColorways({ upper: '#ffffff' }) }
+    })
+    expect(switched.doc.layers.map((l) => l.view)).toEqual(['outer', 'inner', 'outer'])
+    expect(undo(switched.doc, switched.history).doc.layers.map((l) => l.view)).toEqual(['front', 'back', 'side'])
   })
 })

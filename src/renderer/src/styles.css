@@ -159,6 +159,40 @@ button.primary:hover:not(:disabled) {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
+.preview-modal {
+  width: min(92vw, 1180px);
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.preview-header h2 {
+  margin-right: auto;
+}
+
+.preview-sheet {
+  --sheet-height: min(70vh, 760px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--sheet-height);
+  padding: 12px;
+  overflow: auto;
+  background: #3a3b42;
+  border-radius: 8px;
+}
+
+.preview-sheet img {
+  max-width: 100%;
+  max-height: calc(var(--sheet-height) - 24px);
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
 .modal h2 {
   margin: 0;
   font-size: 13px;
@@ -600,6 +634,42 @@ button.danger {
   border: 1px solid var(--border);
   border-radius: 8px;
   z-index: 1;
+}
+
+.view-tabs {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(37, 38, 44, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 1;
+}
+
+.view-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.view-tabs button.selected {
+  border-color: var(--accent);
+  background: #2d3447;
+  color: inherit;
+}
+
+.view-count {
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 999px;
+  background: #3a3c46;
 }
 
 .zoom-controls span {

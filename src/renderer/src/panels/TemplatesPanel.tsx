@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { useEditor } from '../document/store'
-import { CATEGORY_LABELS, getTemplate, TEMPLATE_CATEGORIES, templates, templateThumbnail } from '../templates'
+import { CATEGORY_LABELS, garments, getGarment, TEMPLATE_CATEGORIES, templateThumbnail } from '../templates'
 
-const thumbnails = new Map(templates.map((t) => [t.id, templateThumbnail(t)]))
-const categories = TEMPLATE_CATEGORIES.filter((c) => templates.some((t) => t.category === c))
+const thumbnails = new Map(garments.map((g) => [g.id, templateThumbnail(g.views[0])]))
+const categories = TEMPLATE_CATEGORIES.filter((c) => garments.some((g) => g.category === c))
 
 export function TemplatesPanel() {
   const currentId = useEditor((s) => s.doc.templateId)
   const setTemplate = useEditor((s) => s.setTemplate)
-  const [shown, setShown] = useState({ templateId: currentId, category: getTemplate(currentId).category })
+  const [shown, setShown] = useState({ templateId: currentId, category: getGarment(currentId).category })
 
   // Follow the current template when it changes from outside (open, undo, new project).
   let category = shown.category
   if (shown.templateId !== currentId) {
-    category = getTemplate(currentId).category
+    category = getGarment(currentId).category
     setShown({ templateId: currentId, category })
   }
 
@@ -34,17 +34,17 @@ export function TemplatesPanel() {
         ))}
       </div>
       <div className="template-grid">
-        {templates
-          .filter((t) => t.category === category)
-          .map((t) => (
+        {garments
+          .filter((g) => g.category === category)
+          .map((g) => (
             <button
-              key={t.id}
-              className={t.id === currentId ? 'template-card selected' : 'template-card'}
-              onClick={() => setTemplate(t.id)}
-              title={t.name}
+              key={g.id}
+              className={g.id === currentId ? 'template-card selected' : 'template-card'}
+              onClick={() => setTemplate(g.id)}
+              title={g.name}
             >
-              <img src={thumbnails.get(t.id)} alt="" draggable={false} />
-              <span>{t.name}</span>
+              <img src={thumbnails.get(g.id)} alt="" draggable={false} />
+              <span>{g.name}</span>
             </button>
           ))}
       </div>

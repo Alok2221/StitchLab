@@ -1,9 +1,10 @@
 import { useRef, type ChangeEvent } from 'react'
-import { useEditor } from '../document/store'
+import { useCurrentTemplate, useEditor, useViewLayers } from '../document/store'
 import { IMAGE_ACCEPT, readImage } from './readImage'
 
 export function LayersPanel() {
-  const layers = useEditor((s) => s.doc.layers)
+  const layers = useViewLayers()
+  const template = useCurrentTemplate()
   const selectedLayerId = useEditor((s) => s.selectedLayerId)
   const { selectLayer, addTextLayer, addImageLayer, updateLayer, removeLayer, moveLayer } = useEditor.getState()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -45,7 +46,7 @@ export function LayersPanel() {
       </div>
 
       {layers.length === 0 ? (
-        <p className="hint">Add text or import a graphic to place it on the garment.</p>
+        <p className="hint">Add text or import a graphic to place it on the {template.viewLabel.toLowerCase()}.</p>
       ) : (
         <ul className="layers-list">
           {[...layers].reverse().map((layer) => (

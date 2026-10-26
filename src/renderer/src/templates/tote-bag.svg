@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 650" data-template-id="tote-bag" data-name="Tote bag" data-category="bags">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 650" data-template-id="tote-bag" data-view="front" data-view-label="Front" data-name="Tote bag" data-category="bags">
   <path id="zone-handles" data-label="Handles" fill="#c2a878"
     d="M150 200 L150 120 Q150 40 230 40 L290 40 Q370 40 370 120 L370 200 L340 200 L340 124 Q340 72 288 72 L232 72 Q180 72 180 124 L180 200 Z" />
   <path id="zone-body" data-label="Body" fill="#efe6d2"

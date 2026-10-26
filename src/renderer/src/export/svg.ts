@@ -17,14 +17,14 @@ export function escapeXml(value: string): string {
 
 const round = (n: number) => Math.round(n * 1000) / 1000
 
-function clipId(clip: string): string {
-  return clip === CLIP_GARMENT ? 'clip-garment' : `clip-${clip.replace(/[^a-z0-9-]/gi, '-')}`
+function clipId(clip: string, prefix: string): string {
+  return prefix + (clip === CLIP_GARMENT ? 'clip-garment' : `clip-${clip.replace(/[^a-z0-9-]/gi, '-')}`)
 }
 
-function clipPathDef(template: GarmentTemplate, clip: string): string {
+function clipPathDef(template: GarmentTemplate, clip: string, prefix: string): string {
   const zones = clip === CLIP_GARMENT ? template.zones : template.zones.filter((z) => zoneClip(z.id) === clip)
   const paths = (zones.length > 0 ? zones : template.zones).map((z) => `<path d="${escapeXml(z.path)}" />`).join('')
-  return `<clipPath id="${clipId(clip)}">${paths}</clipPath>`
+  return `<clipPath id="${clipId(clip, prefix)}">${paths}</clipPath>`
 }
 
 function layerContent(layer: Layer): string {
@@ -46,45 +46,57 @@ function layerContent(layer: Layer): string {
   )
 }
 
-function layerElement(layer: Layer): string {
+function layerElement(layer: Layer, prefix: string): string {
   const transform = `translate(${round(layer.x)} ${round(layer.y)}) rotate(${round((layer.rotation * 180) / Math.PI)}) scale(${round(layer.scale)})`
   const opacity = layer.opacity < 1 ? ` opacity="${round(layer.opacity)}"` : ''
   const inner = `<g transform="${transform}"${opacity}>${layerContent(layer)}</g>`
-  return layer.clip === CLIP_NONE ? inner : `<g clip-path="url(#${clipId(layer.clip)})">${inner}</g>`
+  return layer.clip === CLIP_NONE ? inner : `<g clip-path="url(#${clipId(layer.clip, prefix)})">${inner}</g>`
+}
+
+/**
+ * Definitions and drawing of one garment view: its parts, then its visible layers in stacking order.
+ * Every id starts with `prefix`, so several views can share one SVG document.
+ */
+export function viewContent(doc: DesignDocument, template: GarmentTemplate, prefix = ''): { defs: string; body: string } {
+  const layers = doc.layers.filter((l) => l.visible && l.view === template.view)
+  const clips = [...new Set(layers.map((l) => l.clip).filter((c) => c !== CLIP_NONE))]
+  const fills = template.zones.map((zone, i) => {
+    const color = doc.zoneColors[zone.id] ?? zone.defaultColor
+    const pattern = doc.zonePatterns[zone.id]
+    const id = `${prefix}fill-${i}`
+    return pattern ? { def: patternDef(id, pattern, color), ref: `url(#${id})` } : { def: '', ref: color }
+  })
+  const body = [`<g id="${prefix}garment">`]
+  template.zones.forEach((zone, i) => {
+    body.push(
+      `<path id="${prefix}zone-${escapeXml(zone.id)}" d="${escapeXml(zone.path)}" fill="${escapeXml(fills[i].ref)}" stroke="${OUTLINE_COLOR}" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" />`
+    )
+  })
+  body.push('</g>', `<g id="${prefix}layers">`)
+  for (const layer of layers) body.push(layerElement(layer, prefix))
+  body.push('</g>')
+  return {
+    defs: [...clips.map((c) => clipPathDef(template, c, prefix)), ...fills.map((f) => f.def)].join(''),
+    body: body.join('\n')
+  }
 }
 
 export interface SvgExportOptions {
   background?: string | null
 }
 
-/** Self-contained SVG of the design: garment parts, then visible layers in stacking order. */
+/** Self-contained SVG of one garment view. */
 export function documentToSvg(doc: DesignDocument, template: GarmentTemplate, options: SvgExportOptions = {}): string {
   const { x, y, width, height } = template.viewBox
-  const layers = doc.layers.filter((l) => l.visible)
-  const clips = [...new Set(layers.map((l) => l.clip).filter((c) => c !== CLIP_NONE))]
-
+  const { defs, body } = viewContent(doc, template)
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" width="${width}" height="${height}">`,
-    `<title>${escapeXml(template.name)} - StitchLab</title>`
+    `<title>${escapeXml(template.name)} (${escapeXml(template.viewLabel)}) - StitchLab</title>`
   ]
-  const fills = template.zones.map((zone, i) => {
-    const color = doc.zoneColors[zone.id] ?? zone.defaultColor
-    const pattern = doc.zonePatterns[zone.id]
-    return pattern ? { color, def: patternDef(`fill-${i}`, pattern, color), ref: `url(#fill-${i})` } : { color, def: '', ref: color }
-  })
-  const defs = [...clips.map((c) => clipPathDef(template, c)), ...fills.map((f) => f.def)].join('')
   if (defs) parts.push(`<defs>${defs}</defs>`)
   if (options.background) {
     parts.push(`<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${escapeXml(options.background)}" />`)
   }
-  parts.push('<g id="garment">')
-  template.zones.forEach((zone, i) => {
-    parts.push(
-      `<path id="zone-${escapeXml(zone.id)}" d="${escapeXml(zone.path)}" fill="${escapeXml(fills[i].ref)}" stroke="${OUTLINE_COLOR}" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" />`
-    )
-  })
-  parts.push('</g>', '<g id="layers">')
-  for (const layer of layers) parts.push(layerElement(layer))
-  parts.push('</g>', '</svg>')
+  parts.push(body, '</svg>')
   return parts.join('\n')
 }

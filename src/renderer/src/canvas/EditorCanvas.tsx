@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import 'pixi.js/unsafe-eval'
 import { Application } from 'pixi.js'
 import { buildScene, type Viewport } from './scene'
+import { ViewTabs } from './ViewTabs'
 
 export function EditorCanvas() {
   const hostRef = useRef<HTMLDivElement>(null)
@@ -41,6 +42,7 @@ export function EditorCanvas() {
 
   return (
     <div className="canvas-host" ref={hostRef}>
+      <ViewTabs />
       <div className="zoom-controls">
         <button onClick={() => viewportRef.current?.zoomBy(1 / 1.2)} title="Zoom out">
           −
