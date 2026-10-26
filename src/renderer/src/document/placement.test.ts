@@ -1,8 +1,10 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
+import { garments } from '../templates'
 import type { GarmentTemplate } from '../templates/parseTemplate'
 import { deriveView } from '../templates/parseTemplate'
 import { CLIP_GARMENT, CLIP_NONE, zoneClip, type TextLayer } from './model'
-import { placeOnView } from './placement'
+import { DEFAULT_TEXT, defaultFontSize, placeOnView } from './placement'
 
 const front: GarmentTemplate = {
   id: 'shirt',
@@ -65,5 +67,30 @@ describe('placeOnView', () => {
     expect(placeOnView({ ...layer, clip: zoneClip('pocket') }, front, back).clip).toBe(CLIP_GARMENT)
     expect(placeOnView({ ...layer, clip: zoneClip('body') }, front, back).clip).toBe(zoneClip('body'))
     expect(placeOnView({ ...layer, clip: CLIP_NONE }, front, back).clip).toBe(CLIP_NONE)
+  })
+})
+
+describe('defaultFontSize', () => {
+  it('fits the default text in the print area', () => {
+    const size = defaultFontSize(front)
+    expect(DEFAULT_TEXT.length * 0.55 * size).toBeLessThanOrEqual(200 * 0.8)
+    expect(size).toBeGreaterThan(20)
+  })
+
+  it('is limited by a short print area', () => {
+    expect(defaultFontSize({ ...front, printArea: { x: 0, y: 0, width: 400, height: 60 } })).toBe(20)
+  })
+
+  it('never goes below the minimum', () => {
+    expect(defaultFontSize({ ...front, printArea: { x: 0, y: 0, width: 20, height: 20 } })).toBe(12)
+  })
+
+  it('stays well within every template', () => {
+    for (const garment of garments) {
+      for (const view of garment.views) {
+        const textWidth = DEFAULT_TEXT.length * 0.55 * defaultFontSize(view)
+        expect(textWidth, `${garment.id}/${view.view}`).toBeLessThanOrEqual(view.viewBox.width * 0.4)
+      }
+    }
   })
 })

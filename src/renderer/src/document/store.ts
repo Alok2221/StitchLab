@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { create } from 'zustand'
 import { defaultGarment, getGarment, getTemplate, type GarmentTemplate } from '../templates'
 import { addColorway, remapColorways, removeColorway, renameColorway, switchColorway } from './colorways'
-import { DUPLICATE_OFFSET, placeOnView } from './placement'
+import { DEFAULT_TEXT, DUPLICATE_OFFSET, defaultFontSize, placeOnView } from './placement'
 import {
   CLIP_GARMENT,
   colorwayState,
@@ -252,9 +252,9 @@ export const useEditor = create<EditorState>((set, get) => {
         visible: true,
         locked: false,
         clip: CLIP_GARMENT,
-        text: 'Your text',
+        text: DEFAULT_TEXT,
         fontFamily: 'Arial',
-        fontSize: Math.round(Math.max(16, area.width / 4)),
+        fontSize: defaultFontSize(template),
         fontWeight: 'bold',
         fill: '#1f1f22'
       }
