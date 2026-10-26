@@ -6,7 +6,8 @@ parts, add text, graphics and patterns, and export a production-ready design.
 
 **Status:** early MVP - template library (T-shirt, hoodie, trousers, dress,
 tote bag, sneaker, Chelsea boot, slide sandal) with front and back views (outer
-and inner side for footwear), each with its own layers, per-part coloring, palette,
+and inner side for footwear), each with its own layers that can be copied or
+moved between views, per-part coloring, palette,
 part patterns (stripes, checks, dots, grid or your own image, with size and
 angle),
 text and image layers with move / scale / rotate and clipping to the garment
@@ -33,6 +34,8 @@ start after a crash.
 - `Ctrl+S` / `Ctrl+Shift+S` - save / save as
 - `Ctrl+E` - export
 - `Ctrl+P` - preview all views and colorways
+- `Ctrl+C` / `Ctrl+V` - copy the selected layer / paste it onto the current view
+- `Ctrl+D` - duplicate the selected layer
 - Arrows (`Shift` for 10 units) - nudge the selected layer
 - `Delete` - remove the selected layer
 - `Shift` while rotating - snap to 15 degrees

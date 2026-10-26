@@ -92,7 +92,10 @@ its color on both sides; every layer belongs to one view (`layer.view`). The
 active view is UI state, not part of the undo history, but undo and redo switch
 to the view they change. Changing the garment moves layers onto the new
 garment's views by position (second view to second view), and undo restores
-them. Each view exports as its own SVG / PNG (`<garment>-<view>-<colorway>`);
+them. Copying or moving a layer to another view (`document/placement.ts`)
+keeps its spot relative to the print areas, or mirrors it onto a view derived
+with `mirror`, and drops a clip to a part the target view does not have.
+Each view exports as its own SVG / PNG (`<garment>-<view>-<colorway>`);
 the PDF shows the views side by side and groups the layer list by view.
 
 **Lookbook** - `export/lookbook.ts` composes one SVG sheet: the garment name,

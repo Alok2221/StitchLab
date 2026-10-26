@@ -26,6 +26,8 @@ export interface GarmentTemplate {
   viewBox: Rect
   zones: TemplateZone[]
   printArea: Rect | null
+  /** The view this one is a left-right mirror of, for views derived with `mirror`. */
+  mirrorOf?: string
 }
 
 const ZONE_PREFIX = 'zone-'
@@ -137,6 +139,7 @@ export function deriveView(
     ...template,
     view,
     viewLabel,
+    mirrorOf: template.view,
     zones: template.zones.map((z) => ({ ...z, path: mirrorPath(z.path, axis) })),
     printArea: area && { ...area, x: 2 * axis - area.x - area.width }
   }
