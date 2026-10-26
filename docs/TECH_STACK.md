@@ -105,6 +105,18 @@ Preview shows this sheet as an image, and PNG / SVG export can save it instead
 of separate files. PNG sheets are scaled down when they would exceed the
 canvas size Chromium can encode.
 
+**3D preview** - `src/renderer/src/preview3d/` inflates every garment from its
+2D views. A pressure field (Δp = −1 inside, p = 0 on the outline) gives a
+round cross-section whose depth is half the local width, capped per category
+so a tote stays almost flat and a sneaker stays round. The seam sits just
+inside the drawn outline so the texture's dark stroke is not stretched along
+the edge. The front view is mapped onto the +z surface, the back view
+(mirrored, because it is drawn as seen from behind) onto −z; where the two
+outlines differ, such as a hood, the other view is used as an underlay. The
+preview sits in the same canvas as the 2D editor, with orbit, zoom, studio
+lighting and cameras for the front, the back, the side and a three-quarter
+view. Three.js is loaded only when the 3D mode is first opened.
+
 The renderer never touches the file system; it sends the bytes to the main
 process, which shows the dialog, validates the request and writes the files.
 `file:save` writes a single file; `file:saveMany` asks for a folder, sanitizes
@@ -154,7 +166,7 @@ src/
       document/     document model, operations, store
       panels/       React UI around the canvas
       templates/    garment SVG templates and parser
-      preview3d/    Three.js preview (planned)
+      preview3d/    Three.js preview, inflated from the 2D templates
 docs/
 ```
 

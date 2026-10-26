@@ -2,7 +2,7 @@
 
 Desktop app for designing clothing: start from a garment template, color its
 parts, add text, graphics and patterns, and export a production-ready design.
-2D editor first, 3D mannequin preview later.
+A 2D editor with a 3D preview of the same design, inflated from the templates.
 
 **Status:** early MVP - template library (T-shirt, hoodie, trousers, dress,
 tote bag, sneaker, Chelsea boot, slide sandal) with front and back views (outer
@@ -18,6 +18,9 @@ one design side by side. Export can include every view and every colorway at
 once: one PNG or SVG per view and colorway, a single lookbook sheet with the
 views side by side and a row per colorway (also shown by Preview), or a single
 PDF with an overview page and a spec sheet per colorway showing all views.
+The canvas switches to a 3D preview of the garment, with orbit, zoom and
+preset cameras; the design is applied as a texture and updates after each
+edit.
 Projects are
 saved as `.stitch` files,
 and unsaved work is autosaved to a recovery file that is offered on the next
@@ -34,6 +37,7 @@ start after a crash.
 - `Ctrl+S` / `Ctrl+Shift+S` - save / save as
 - `Ctrl+E` - export
 - `Ctrl+P` - preview all views and colorways
+- `Ctrl+3` - switch between the 2D editor and the 3D preview
 - `Ctrl+C` / `Ctrl+V` - copy the selected layer / paste it onto the current view
 - `Ctrl+D` - duplicate the selected layer
 - Arrows (`Shift` for 10 units) - nudge the selected layer
