@@ -14,8 +14,10 @@ or a single part, undo / redo, pan and zoom, and export to PNG (1x-8x,
 transparent or white background), SVG (editable vector) and PDF (A4 sheet with
 the design, part colors and a layer list). Colorways keep several color sets of
 one design side by side. Export can include every view and every colorway at
-once: one PNG or SVG per view and colorway, or a single PDF with an overview
-page and a spec sheet per colorway showing all views. Projects are
+once: one PNG or SVG per view and colorway, a single lookbook sheet with the
+views side by side and a row per colorway (also shown by Preview), or a single
+PDF with an overview page and a spec sheet per colorway showing all views.
+Projects are
 saved as `.stitch` files,
 and unsaved work is autosaved to a recovery file that is offered on the next
 start after a crash.
@@ -30,6 +32,7 @@ start after a crash.
 - `Ctrl+N` / `Ctrl+O` - new / open project
 - `Ctrl+S` / `Ctrl+Shift+S` - save / save as
 - `Ctrl+E` - export
+- `Ctrl+P` - preview all views and colorways
 - Arrows (`Shift` for 10 units) - nudge the selected layer
 - `Delete` - remove the selected layer
 - `Shift` while rotating - snap to 15 degrees

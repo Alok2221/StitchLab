@@ -3,6 +3,7 @@ import { isDirty, useCurrentTemplate, useEditor } from '../document/store'
 import { fileStem, newProject, openProject, saveProject } from '../project/actions'
 import { notify, useNotice } from '../project/notice'
 import { ExportDialog } from './ExportDialog'
+import { LookbookPreview } from './LookbookPreview'
 
 const NOTICE_MS = 6000
 
@@ -16,6 +17,7 @@ export function Toolbar() {
   const dirty = useEditor(isDirty)
   const notice = useNotice((s) => s.notice)
   const [exportOpen, setExportOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   useEffect(() => {
     if (!notice) return
@@ -29,6 +31,7 @@ export function Toolbar() {
       const key = e.key.toLowerCase()
       const actions: Record<string, () => void> = {
         e: () => setExportOpen(true),
+        p: () => setPreviewOpen(true),
         s: () => void saveProject(e.shiftKey),
         o: () => void openProject(),
         n: () => void newProject()
@@ -76,10 +79,14 @@ export function Toolbar() {
         {dirty ? '* ' : ''}
         {fileStem(filePath) ?? 'Untitled'} - {template.name}
       </span>
+      <button onClick={() => setPreviewOpen(true)} title="Preview all views and colorways (Ctrl+P)">
+        Preview
+      </button>
       <button className="primary" onClick={() => setExportOpen(true)} title="Export (Ctrl+E)">
         Export
       </button>
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} onExported={(message) => notify(message)} />}
+      {previewOpen && <LookbookPreview onClose={() => setPreviewOpen(false)} onExported={(message) => notify(message)} />}
     </header>
   )
 }

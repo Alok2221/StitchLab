@@ -95,6 +95,13 @@ garment's views by position (second view to second view), and undo restores
 them. Each view exports as its own SVG / PNG (`<garment>-<view>-<colorway>`);
 the PDF shows the views side by side and groups the layer list by view.
 
+**Lookbook** - `export/lookbook.ts` composes one SVG sheet: the garment name,
+then a row per colorway with every view side by side, each view nested as its
+own `<svg>` with ids prefixed per cell so clip paths and patterns do not clash.
+Preview shows this sheet as an image, and PNG / SVG export can save it instead
+of separate files. PNG sheets are scaled down when they would exceed the
+canvas size Chromium can encode.
+
 The renderer never touches the file system; it sends the bytes to the main
 process, which shows the dialog, validates the request and writes the files.
 `file:save` writes a single file; `file:saveMany` asks for a folder, sanitizes

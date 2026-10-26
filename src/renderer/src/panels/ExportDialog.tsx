@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { EXPORT_FORMATS, type ExportFormat } from '../../../shared/api'
 import { useCurrentTemplate, useEditor } from '../document/store'
 import { exportDesign, exportSize } from '../export'
+import { lookbookScale, lookbookSize } from '../export/lookbook'
 import { getGarment } from '../templates'
 
 const PNG_SCALES = [1, 2, 4, 8]
@@ -10,6 +11,11 @@ const FORMAT_HINTS: Record<ExportFormat, string> = {
   png: 'Raster image for shops, social media and mockups.',
   svg: 'Editable vector file for Illustrator, Inkscape or Figma.',
   pdf: 'A4 sheet with the design, part colors and a layer list for the manufacturer.'
+}
+
+function sheetPixels(width: number, height: number, scale: number) {
+  const fitted = lookbookScale(width, height, scale)
+  return { width: Math.round(width * fitted), height: Math.round(height * fitted) }
 }
 
 interface Props {
@@ -30,6 +36,14 @@ export function ExportDialog({ onClose, onExported }: Props) {
   const [allViews, setAllViews] = useState(views.length > 1)
   const exportViews = allViews && views.length > 1
   const fileCount = (exportAll ? colorwayCount : 1) * (exportViews ? views.length : 1)
+  const [combine, setCombine] = useState(false)
+  const sheet = combine && format !== 'pdf' && fileCount > 1
+  const colorwayNames = useEditor((s) => s.doc.colorways.map((c) => c.name).join('\n'))
+  const sheetSize = useMemo(() => {
+    const names = colorwayNames.split('\n')
+    const rows = colorwayCount > 1 ? (exportAll ? names : [activeName ?? '']) : [null]
+    return lookbookSize(exportViews ? views : [template], rows)
+  }, [colorwayNames, colorwayCount, exportAll, activeName, exportViews, views, template])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,7 +64,8 @@ export function ExportDialog({ onClose, onExported }: Props) {
         pngScale,
         background: transparent && format !== 'pdf' ? null : '#ffffff',
         allColorways: exportAll,
-        allViews: exportViews
+        allViews: exportViews,
+        combine: sheet
       })
       if (message) {
         onExported(message)
@@ -82,7 +97,9 @@ export function ExportDialog({ onClose, onExported }: Props) {
             <span>Resolution</span>
             <select value={pngScale} onChange={(e) => setPngScale(Number(e.target.value))}>
               {PNG_SCALES.map((scale) => {
-                const { width, height } = exportSize(template, scale)
+                const { width, height } = sheet
+                  ? sheetPixels(sheetSize.width, sheetSize.height, scale)
+                  : exportSize(template, scale)
                 return (
                   <option key={scale} value={scale}>
                     {scale}x - {width} x {height} px
@@ -114,6 +131,13 @@ export function ExportDialog({ onClose, onExported }: Props) {
           </label>
         )}
 
+        {format !== 'pdf' && fileCount > 1 && (
+          <label className="field checkbox">
+            <input type="checkbox" checked={combine} onChange={(e) => setCombine(e.target.checked)} />
+            <span>Combine into one lookbook sheet</span>
+          </label>
+        )}
+
         {(views.length > 1 || colorwayCount > 1) && (
           <p className="hint">
             {exportViews ? 'Every view' : `Only the ${template.viewLabel.toLowerCase()}`}
@@ -122,9 +146,11 @@ export function ExportDialog({ onClose, onExported }: Props) {
               ? exportAll
                 ? 'One PDF with an overview page and a spec sheet per colorway.'
                 : 'One PDF spec sheet.'
-              : fileCount > 1
-                ? `${fileCount} ${format.toUpperCase()} files, saved into a folder you choose.`
-                : `One ${format.toUpperCase()} file.`}
+              : sheet
+                ? `One ${format.toUpperCase()} sheet with views side by side${exportAll ? ' and a row per colorway' : ''}.`
+                : fileCount > 1
+                  ? `${fileCount} ${format.toUpperCase()} files, saved into a folder you choose.`
+                  : `One ${format.toUpperCase()} file.`}
           </p>
         )}
 
@@ -137,7 +163,7 @@ export function ExportDialog({ onClose, onExported }: Props) {
           <button className="primary" onClick={run} disabled={busy}>
             {busy
               ? 'Exporting...'
-              : format !== 'pdf' && fileCount > 1
+              : format !== 'pdf' && fileCount > 1 && !sheet
                 ? `Export ${fileCount} files`
                 : `Export ${format.toUpperCase()}`}
           </button>
