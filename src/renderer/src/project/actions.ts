@@ -3,7 +3,7 @@ import { createDocument, type DesignDocument } from '../document/model'
 import { isDirty, useEditor } from '../document/store'
 import { svgToPng } from '../export/raster'
 import { documentToSvg } from '../export/svg'
-import { defaultTemplate, getTemplate, hasTemplate } from '../templates'
+import { defaultGarment, getGarment, getTemplate, hasGarment, LEGACY_GARMENT_IDS } from '../templates'
 import { parseProject, ProjectFormatError, serializeProject } from './format'
 import { notify } from './notice'
 
@@ -24,12 +24,20 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** Fills in parts the saved document does not know about and drops parts the template no longer has. */
+/**
+ * Upgrades a loaded document to the current templates: maps legacy template ids to garments,
+ * puts layers without a known view on the first view, fills in parts the saved document
+ * does not know about and drops parts the garment no longer has.
+ */
 export function adoptDocument(doc: DesignDocument): DesignDocument {
-  if (!hasTemplate(doc.templateId)) {
+  const templateId = LEGACY_GARMENT_IDS[doc.templateId] ?? doc.templateId
+  if (!hasGarment(templateId)) {
     throw new ProjectFormatError(`This project uses an unknown template: ${doc.templateId}`)
   }
-  return { ...doc, ...remapColorways(doc, getTemplate(doc.templateId).zones) }
+  const garment = getGarment(templateId)
+  const views = new Set(garment.views.map((v) => v.view))
+  const layers = doc.layers.map((l) => (views.has(l.view) ? l : { ...l, view: garment.views[0].view }))
+  return { ...doc, templateId, layers, ...remapColorways(doc, garment.zones) }
 }
 
 async function thumbnailFor(doc: DesignDocument): Promise<Uint8Array | undefined> {
@@ -69,7 +77,7 @@ function confirmDiscard(): boolean {
 
 export async function newProject(): Promise<void> {
   if (!confirmDiscard()) return
-  useEditor.getState().loadDocument(createDocument(defaultTemplate.id, defaultTemplate.zones), null)
+  useEditor.getState().loadDocument(createDocument(defaultGarment.id, defaultGarment.zones), null)
   await api().clearRecovery()
 }
 

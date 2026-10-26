@@ -17,8 +17,8 @@ import {
 import { clampPatternScale } from '../document/patterns'
 
 export const PROJECT_FORMAT = 'stitchlab-project'
-/** v2 added colorways, v3 part patterns; older files still load. */
-export const PROJECT_VERSION = 3
+/** v2 added colorways, v3 part patterns, v4 garment views on layers; older files still load. */
+export const PROJECT_VERSION = 4
 
 const PROJECT_JSON = 'project.json'
 const THUMBNAIL = 'thumbnail.png'
@@ -164,10 +164,13 @@ function fail(message: string): never {
   throw new ProjectFormatError(`Invalid project file: ${message}`)
 }
 
-function readLayerBase(raw: Record<string, unknown>, index: number) {
+function readLayerBase(raw: Record<string, unknown>, index: number, version: number) {
   const where = `layer ${index + 1}`
   if (!isString(raw.id) || !raw.id) fail(`${where} has no id`)
   if (!isString(raw.name)) fail(`${where} has no name`)
+  // Before v4 every layer sat on the only view; the editor assigns the garment's first view.
+  const view = raw.view === undefined && version < 4 ? '' : raw.view
+  if (!isString(view)) fail(`${where} has an invalid view`)
   for (const key of ['x', 'y', 'rotation', 'scale', 'opacity'] as const) {
     if (!isNumber(raw[key])) fail(`${where} has an invalid ${key}`)
   }
@@ -176,6 +179,7 @@ function readLayerBase(raw: Record<string, unknown>, index: number) {
   return {
     id: raw.id,
     name: raw.name,
+    view,
     x: raw.x as number,
     y: raw.y as number,
     rotation: raw.rotation as number,
@@ -187,9 +191,9 @@ function readLayerBase(raw: Record<string, unknown>, index: number) {
   }
 }
 
-function readLayer(raw: unknown, index: number, files: Record<string, Uint8Array>): Layer {
+function readLayer(raw: unknown, index: number, version: number, files: Record<string, Uint8Array>): Layer {
   if (!isObject(raw)) fail(`layer ${index + 1} is not an object`)
-  const base = readLayerBase(raw, index)
+  const base = readLayerBase(raw, index, version)
 
   if (raw.type === 'text') {
     if (!isString(raw.text) || !isString(raw.fontFamily) || !isNumber(raw.fontSize) || !isColor(raw.fill)) {
@@ -313,7 +317,8 @@ export function parseProject(data: Uint8Array): LoadedProject {
   if (!Array.isArray(raw.palette) || !raw.palette.every(isColor)) fail('invalid palette')
   if (!Array.isArray(raw.layers) || raw.layers.length > MAX_LAYERS) fail('invalid layers')
 
-  const layers = raw.layers.map((layer, i) => readLayer(layer, i, files))
+  const version = json.version
+  const layers = raw.layers.map((layer, i) => readLayer(layer, i, version, files))
   if (new Set(layers.map((l) => l.id)).size !== layers.length) fail('duplicate layer ids')
 
   const decoded = new Map<string, string>()
@@ -327,7 +332,6 @@ export function parseProject(data: Uint8Array): LoadedProject {
     return src
   }
 
-  const version = json.version
   const fills: ZoneFills = {
     zoneColors: raw.zoneColors as Record<string, string>,
     zonePatterns: raw.zonePatterns === undefined && version < 3 ? {} : readPatterns(raw.zonePatterns, 'document', readImage)

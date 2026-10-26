@@ -115,7 +115,7 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
   overlay.addChild(frame, rotateLine)
   app.stage.addChild(world, overlay)
 
-  let template = getTemplate(useEditor.getState().doc.templateId)
+  let template = getTemplate(useEditor.getState().doc.templateId, useEditor.getState().activeViewId)
   const zoneGraphics = new Map<string, Graphics>()
   const views = new Map<string, LayerView>()
   let gesture: Gesture | null = null
@@ -227,7 +227,7 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
       if (display.texture !== Texture.EMPTY) display.setSize(layer.width, layer.height)
     }
 
-    const maskKey = `${template.id}|${layer.clip}`
+    const maskKey = `${template.id}|${template.view}|${layer.clip}`
     if (maskKey !== view.maskKey) {
       view.maskKey = maskKey
       view.mask.clear()
@@ -247,6 +247,7 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
     const alive = new Set<string>()
     layersRoot.removeChildren()
     for (const layer of layers) {
+      if (layer.view !== template.view) continue
       alive.add(layer.id)
       const view = views.get(layer.id) ?? createView(layer)
       updateView(view, layer)
@@ -468,12 +469,13 @@ export function buildScene(app: Application, onZoom: (zoom: number) => void): { 
   fit()
 
   const unsubscribe = useEditor.subscribe((s, prev) => {
-    if (s.doc.templateId !== prev.doc.templateId) {
-      template = getTemplate(s.doc.templateId)
+    if (s.doc.templateId !== prev.doc.templateId || s.activeViewId !== prev.activeViewId) {
+      template = getTemplate(s.doc.templateId, s.activeViewId)
       mountTemplate()
       drawZones()
       syncLayers()
-      fit()
+      // Views of one garment share a frame, so switching views keeps the zoom.
+      if (s.doc.templateId !== prev.doc.templateId) fit()
       return
     }
     if (

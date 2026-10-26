@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 680" data-template-id="hoodie" data-view="back" data-view-label="Back" data-name="Hoodie" data-category="tops">
+  <path id="zone-sleeve-right" data-label="Right sleeve" fill="#3b3f4a"
+    d="M170 140 Q118 152 102 230 L62 560 L132 572 L172 330 Z" />
+  <path id="zone-sleeve-left" data-label="Left sleeve" fill="#3b3f4a"
+    d="M470 140 Q522 152 538 230 L578 560 L508 572 L468 330 Z" />
+  <path id="zone-cuff-right" data-label="Right cuff" fill="#2c2f37"
+    d="M62 560 L132 572 L128 612 L56 602 Z" />
+  <path id="zone-cuff-left" data-label="Left cuff" fill="#2c2f37"
+    d="M578 560 L508 572 L512 612 L584 602 Z" />
+  <path id="zone-body" data-label="Body" fill="#3b3f4a"
+    d="M226 120 L170 140 Q160 400 168 610 L472 610 Q480 400 470 140 L414 120 Z" />
+  <path id="zone-hood" data-label="Hood" fill="#3b3f4a"
+    d="M226 120 Q204 34 320 18 Q436 34 414 120 Q404 196 320 236 Q236 196 226 120 Z" />
+  <path id="zone-waistband" data-label="Waistband" fill="#2c2f37"
+    d="M168 610 L472 610 L470 660 L170 660 Z" />
+  <rect id="print-area" x="220" y="262" width="200" height="250" fill="none" />
+</svg>

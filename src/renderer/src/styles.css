@@ -602,6 +602,42 @@ button.danger {
   z-index: 1;
 }
 
+.view-tabs {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(37, 38, 44, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 1;
+}
+
+.view-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.view-tabs button.selected {
+  border-color: var(--accent);
+  background: #2d3447;
+  color: inherit;
+}
+
+.view-count {
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 999px;
+  background: #3a3c46;
+}
+
 .zoom-controls span {
   min-width: 44px;
   text-align: center;

@@ -1,13 +1,16 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
-import { defaultTemplate, getTemplate, type GarmentTemplate } from '../templates'
+import { defaultGarment, getGarment, getTemplate, type GarmentTemplate } from '../templates'
 import { addColorway, remapColorways, removeColorway, renameColorway, switchColorway } from './colorways'
 import {
   CLIP_GARMENT,
   colorwayState,
   commit,
   createDocument,
+  layerViews,
   pickLayerValues,
   redo,
+  remapLayerViews,
   undo,
   type DesignDocument,
   type History,
@@ -24,6 +27,8 @@ interface EditorState {
   history: History
   selectedZoneId: string | null
   selectedLayerId: string | null
+  /** View of the garment shown on the canvas; UI state, not part of the undo history. */
+  activeViewId: string
   /** Path of the open project file, or null for an unsaved project. */
   filePath: string | null
   /** Increments on every document change; compared with `savedRevision` to detect unsaved work. */
@@ -36,6 +41,7 @@ interface EditorState {
   redo: () => void
   selectZone: (zoneId: string | null) => void
   selectLayer: (layerId: string | null) => void
+  setActiveView: (viewId: string) => void
   setZoneColor: (zoneId: string, color: string) => void
   addPaletteColor: (color: string) => void
   setTemplate: (templateId: string) => void
@@ -51,13 +57,27 @@ interface EditorState {
   removeColorway: (id: string) => void
 }
 
-type Selection = Pick<EditorState, 'selectedZoneId' | 'selectedLayerId'>
+type ViewState = Pick<EditorState, 'selectedZoneId' | 'selectedLayerId' | 'activeViewId'>
 
-function keepValidSelection(doc: DesignDocument, s: Selection): Selection {
+/** Falls back to the first view when the garment has no such view, and drops selection outside the view. */
+function keepValidView(doc: DesignDocument, s: ViewState): ViewState {
+  const view = getTemplate(doc.templateId, s.activeViewId)
   return {
-    selectedZoneId: s.selectedZoneId && s.selectedZoneId in doc.zoneColors ? s.selectedZoneId : null,
-    selectedLayerId: doc.layers.some((l) => l.id === s.selectedLayerId) ? s.selectedLayerId : null
+    activeViewId: view.view,
+    selectedZoneId: view.zones.some((z) => z.id === s.selectedZoneId) ? s.selectedZoneId : null,
+    selectedLayerId: doc.layers.some((l) => l.id === s.selectedLayerId && l.view === view.view)
+      ? s.selectedLayerId
+      : null
   }
+}
+
+/** Switches to the view a layer operation changes, so undo and redo never act out of sight. */
+function showChangedView<S extends ViewState & { doc: DesignDocument }>(s: S, op: Operation | undefined): S {
+  let view: string | undefined
+  if (op?.type === 'addLayer' || op?.type === 'removeLayer') view = op.layer.view
+  else if (op?.type === 'updateLayer') view = s.doc.layers.find((l) => l.id === op.id)?.view
+  else if (op?.type === 'moveLayer') view = (s.doc.layers[op.from] ?? s.doc.layers[op.to])?.view
+  return view && view !== s.activeViewId ? { ...s, activeViewId: view } : s
 }
 
 /** Center of the print area, or of the whole template when it has none. */
@@ -81,15 +101,18 @@ export const useEditor = create<EditorState>((set, get) => {
 
   const applyHistoryStep = (s: EditorState, next: { doc: DesignDocument; history: History }) => ({
     ...next,
-    ...keepValidSelection(next.doc, s),
+    ...keepValidView(next.doc, s),
     revision: next.doc === s.doc ? s.revision : s.revision + 1
   })
 
+  const activeTemplate = () => getTemplate(get().doc.templateId, get().activeViewId)
+
   return {
-    doc: createDocument(defaultTemplate.id, defaultTemplate.zones),
+    doc: createDocument(defaultGarment.id, defaultGarment.zones),
     history: { past: [], future: [] },
     selectedZoneId: null,
     selectedLayerId: null,
+    activeViewId: defaultGarment.views[0].view,
     filePath: null,
     revision: 0,
     savedRevision: 0,
@@ -103,6 +126,7 @@ export const useEditor = create<EditorState>((set, get) => {
           history: { past: [], future: [] },
           selectedZoneId: null,
           selectedLayerId: null,
+          activeViewId: getTemplate(doc.templateId).view,
           revision,
           savedRevision: options.dirty ? -1 : revision
         }
@@ -110,10 +134,11 @@ export const useEditor = create<EditorState>((set, get) => {
     markSaved: (filePath, revision) => set({ filePath, savedRevision: revision }),
 
     dispatch: (op) => set((s) => applyHistoryStep(s, commit(s.doc, s.history, op))),
-    undo: () => set((s) => applyHistoryStep(s, undo(s.doc, s.history))),
-    redo: () => set((s) => applyHistoryStep(s, redo(s.doc, s.history))),
+    undo: () => set((s) => applyHistoryStep(showChangedView(s, s.history.past.at(-1)), undo(s.doc, s.history))),
+    redo: () => set((s) => applyHistoryStep(showChangedView(s, s.history.future[0]), redo(s.doc, s.history))),
     selectZone: (selectedZoneId) => set({ selectedZoneId, selectedLayerId: null }),
     selectLayer: (selectedLayerId) => set({ selectedLayerId, selectedZoneId: null }),
+    setActiveView: (viewId) => set((s) => keepValidView(s.doc, { ...s, activeViewId: viewId })),
 
     setZoneColor: (zoneId, color) => {
       const from = get().doc.zoneColors[zoneId]
@@ -129,12 +154,20 @@ export const useEditor = create<EditorState>((set, get) => {
     setTemplate: (templateId) => {
       const { doc } = get()
       if (doc.templateId === templateId) return
-      const template = getTemplate(templateId)
+      const garment = getGarment(templateId)
+      const fromViews = getGarment(doc.templateId).views.map((v) => v.view)
+      const toViews = garment.views.map((v) => v.view)
+      const activeView = toViews[fromViews.indexOf(get().activeViewId)] ?? toViews[0]
       get().dispatch({
         type: 'setTemplate',
-        from: { templateId: doc.templateId, ...colorwayState(doc) },
-        to: { templateId: template.id, ...remapColorways(doc, template.zones) }
+        from: { templateId: doc.templateId, layerViews: layerViews(doc.layers), ...colorwayState(doc) },
+        to: {
+          templateId: garment.id,
+          layerViews: remapLayerViews(doc.layers, fromViews, toViews),
+          ...remapColorways(doc, garment.zones)
+        }
       })
+      set((s) => keepValidView(s.doc, { ...s, activeViewId: activeView }))
     },
 
     setZonePattern: (zoneId, pattern, mergeKey) => {
@@ -165,11 +198,13 @@ export const useEditor = create<EditorState>((set, get) => {
 
     addTextLayer: () => {
       const { doc } = get()
-      const area = placementArea(getTemplate(doc.templateId))
+      const template = activeTemplate()
+      const area = placementArea(template)
       const layer: TextLayer = {
         id: crypto.randomUUID(),
         type: 'text',
         name: nextName(doc.layers, 'Text'),
+        view: template.view,
         x: area.cx,
         y: area.cy,
         rotation: 0,
@@ -188,13 +223,14 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     addImageLayer: ({ src, width, height, name }) => {
-      const { doc } = get()
-      const area = placementArea(getTemplate(doc.templateId))
+      const template = activeTemplate()
+      const area = placementArea(template)
       const scale = Math.min(1, (area.width * 0.8) / width, (area.height * 0.8) / height)
       const layer: ImageLayer = {
         id: crypto.randomUUID(),
         type: 'image',
         name,
+        view: template.view,
         x: area.cx,
         y: area.cy,
         rotation: 0,
@@ -228,15 +264,25 @@ export const useEditor = create<EditorState>((set, get) => {
     moveLayer: (id, direction) => {
       const { layers } = get().doc
       const from = layers.findIndex((l) => l.id === id)
-      const to = direction === 'up' ? from + 1 : from - 1
-      if (from < 0 || to < 0 || to >= layers.length) return
+      if (from < 0) return
+      const step = direction === 'up' ? 1 : -1
+      let to = from + step
+      while (to >= 0 && to < layers.length && layers[to].view !== layers[from].view) to += step
+      if (to < 0 || to >= layers.length) return
       get().dispatch({ type: 'moveLayer', from, to })
     }
   }
 })
 
+/** The garment view shown on the canvas. */
 export function useCurrentTemplate(): GarmentTemplate {
-  return useEditor((s) => getTemplate(s.doc.templateId))
+  return useEditor((s) => getTemplate(s.doc.templateId, s.activeViewId))
+}
+
+export function useViewLayers(): Layer[] {
+  const layers = useEditor((s) => s.doc.layers)
+  const view = useEditor((s) => s.activeViewId)
+  return useMemo(() => layers.filter((l) => l.view === view), [layers, view])
 }
 
 export const isDirty = (s: Pick<EditorState, 'revision' | 'savedRevision'>) => s.revision !== s.savedRevision

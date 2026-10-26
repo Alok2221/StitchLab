@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { EXPORT_FORMATS, type ExportFormat } from '../../../shared/api'
 import { useCurrentTemplate, useEditor } from '../document/store'
 import { exportDesign, exportSize } from '../export'
+import { getGarment } from '../templates'
 
 const PNG_SCALES = [1, 2, 4, 8]
 
@@ -18,6 +19,7 @@ interface Props {
 
 export function ExportDialog({ onClose, onExported }: Props) {
   const template = useCurrentTemplate()
+  const views = useEditor((s) => getGarment(s.doc.templateId).views)
   const [format, setFormat] = useState<ExportFormat>('png')
   const [pngScale, setPngScale] = useState(4)
   const [transparent, setTransparent] = useState(true)
@@ -25,6 +27,9 @@ export function ExportDialog({ onClose, onExported }: Props) {
   const activeName = useEditor((s) => s.doc.colorways.find((c) => c.id === s.doc.activeColorwayId)?.name)
   const [allColorways, setAllColorways] = useState(colorwayCount > 1)
   const exportAll = allColorways && colorwayCount > 1
+  const [allViews, setAllViews] = useState(views.length > 1)
+  const exportViews = allViews && views.length > 1
+  const fileCount = (exportAll ? colorwayCount : 1) * (exportViews ? views.length : 1)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,11 +45,12 @@ export function ExportDialog({ onClose, onExported }: Props) {
     setBusy(true)
     setError(null)
     try {
-      const message = await exportDesign(useEditor.getState().doc, template, {
+      const message = await exportDesign(useEditor.getState().doc, views, template, {
         format,
         pngScale,
         background: transparent && format !== 'pdf' ? null : '#ffffff',
-        allColorways: exportAll
+        allColorways: exportAll,
+        allViews: exportViews
       })
       if (message) {
         onExported(message)
@@ -94,20 +100,32 @@ export function ExportDialog({ onClose, onExported }: Props) {
           </label>
         )}
 
+        {views.length > 1 && (
+          <label className="field checkbox">
+            <input type="checkbox" checked={allViews} onChange={(e) => setAllViews(e.target.checked)} />
+            <span>All views ({views.map((v) => v.viewLabel).join(', ')})</span>
+          </label>
+        )}
+
         {colorwayCount > 1 && (
-          <>
-            <label className="field checkbox">
-              <input type="checkbox" checked={allColorways} onChange={(e) => setAllColorways(e.target.checked)} />
-              <span>All colorways ({colorwayCount})</span>
-            </label>
-            <p className="hint">
-              {!exportAll
-                ? `Only the active colorway: ${activeName}.`
-                : format === 'pdf'
-                  ? 'One PDF with an overview page and a spec sheet per colorway.'
-                  : `One ${format.toUpperCase()} file per colorway, saved into a folder you choose.`}
-            </p>
-          </>
+          <label className="field checkbox">
+            <input type="checkbox" checked={allColorways} onChange={(e) => setAllColorways(e.target.checked)} />
+            <span>All colorways ({colorwayCount})</span>
+          </label>
+        )}
+
+        {(views.length > 1 || colorwayCount > 1) && (
+          <p className="hint">
+            {exportViews ? 'Every view' : `Only the ${template.viewLabel.toLowerCase()}`}
+            {colorwayCount > 1 && (exportAll ? ', every colorway' : `, colorway ${activeName}`)}.{' '}
+            {format === 'pdf'
+              ? exportAll
+                ? 'One PDF with an overview page and a spec sheet per colorway.'
+                : 'One PDF spec sheet.'
+              : fileCount > 1
+                ? `${fileCount} ${format.toUpperCase()} files, saved into a folder you choose.`
+                : `One ${format.toUpperCase()} file.`}
+          </p>
         )}
 
         {error && <p className="error">{error}</p>}
@@ -117,7 +135,11 @@ export function ExportDialog({ onClose, onExported }: Props) {
             Cancel
           </button>
           <button className="primary" onClick={run} disabled={busy}>
-            {busy ? 'Exporting...' : exportAll ? `Export ${colorwayCount} colorways` : `Export ${format.toUpperCase()}`}
+            {busy
+              ? 'Exporting...'
+              : format !== 'pdf' && fileCount > 1
+                ? `Export ${fileCount} files`
+                : `Export ${format.toUpperCase()}`}
           </button>
         </div>
       </div>

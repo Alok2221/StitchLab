@@ -14,7 +14,7 @@ function apply(doc: DesignDocument, to: ReturnType<typeof addColorway> | null): 
 }
 
 function twoColorways() {
-  let doc = createDocument('tshirt-front', zones)
+  let doc = createDocument('tshirt', zones)
   doc = { ...doc, zoneColors: { ...doc.zoneColors, body: '#111111' } }
   doc = apply(doc, addColorway(doc, 'red'))
   return { ...doc, zoneColors: { ...doc.zoneColors, body: '#c8102e' } }
@@ -22,7 +22,7 @@ function twoColorways() {
 
 describe('colorways', () => {
   it('starts with one colorway holding the template colors', () => {
-    const doc = createDocument('tshirt-front', zones)
+    const doc = createDocument('tshirt', zones)
     expect(doc.colorways).toEqual([{ id: 'colorway-1', name: 'Colorway 1', zoneColors: doc.zoneColors, zonePatterns: {} }])
     expect(doc.activeColorwayId).toBe('colorway-1')
   })

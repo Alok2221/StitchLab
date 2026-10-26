@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 640" data-template-id="chelsea-boot-side" data-name="Chelsea boot" data-category="footwear">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 640" data-template-id="chelsea-boot" data-view="outer" data-view-label="Outer side" data-name="Chelsea boot" data-category="footwear">
   <path id="zone-pull-tab" data-label="Pull tab" fill="#1f1f22"
     d="M128 96 L146 34 Q156 22 168 34 L180 96 Z" />
   <path id="zone-upper" data-label="Upper" fill="#6b4a32"
