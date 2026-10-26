@@ -739,13 +739,33 @@ button.danger {
   pointer-events: none;
 }
 
-.preview3d-hint {
+.preview3d-export {
   position: absolute;
   right: 12px;
-  bottom: 16px;
-  font-size: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  background: rgba(37, 38, 44, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 1;
+}
+
+.preview3d-export .field.checkbox {
+  padding-bottom: 0;
   color: var(--muted);
-  pointer-events: none;
+}
+
+.preview3d-export select {
+  width: auto;
+  font: inherit;
+  color: inherit;
+  background: #2a2b31;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
 }
 
 .zoom-controls span {

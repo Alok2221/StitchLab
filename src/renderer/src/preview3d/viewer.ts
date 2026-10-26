@@ -22,13 +22,21 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import type { InflatedMesh } from './inflate'
+import { pngFromDataUrl, snapshotSize } from './snapshot'
 
 export type CameraPreset = 'front' | 'back' | 'side' | 'three-quarter'
+
+export interface SnapshotOptions {
+  longSide: number
+  transparent: boolean
+}
 
 export interface Viewer {
   setMesh: (mesh: InflatedMesh) => void
   setTextures: (front: HTMLCanvasElement, back: HTMLCanvasElement) => void
   setPreset: (preset: CameraPreset) => void
+  /** PNG of the current camera, rendered at `longSide` on the longer edge. */
+  capturePng: (options: SnapshotOptions) => Uint8Array
   dispose: () => void
 }
 
@@ -52,7 +60,7 @@ function garmentMaterial() {
 
 /** Three.js scene with the garment, studio lighting and an orbit camera, drawn into `host`. */
 export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => void } = {}): Viewer {
-  const renderer = new WebGLRenderer({ antialias: true })
+  const renderer = new WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(devicePixelRatio)
   renderer.outputColorSpace = SRGBColorSpace
   renderer.toneMapping = NeutralToneMapping
@@ -186,6 +194,41 @@ export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => v
         materials[i].needsUpdate = true
       })
       garment.visible = true
+    },
+
+    capturePng({ longSide, transparent }) {
+      const { clientWidth, clientHeight } = host
+      const { width, height } = snapshotSize(
+        clientWidth / Math.max(1, clientHeight),
+        longSide,
+        renderer.capabilities.maxTextureSize
+      )
+      const previous = {
+        background: scene.background,
+        floor: floor.visible,
+        ratio: renderer.getPixelRatio()
+      }
+      try {
+        if (transparent) {
+          scene.background = null
+          renderer.setClearAlpha(0)
+          floor.visible = false
+        }
+        renderer.setPixelRatio(1)
+        renderer.setSize(width, height, false)
+        camera.aspect = width / height
+        camera.updateProjectionMatrix()
+        renderer.render(scene, camera)
+        return pngFromDataUrl(renderer.domElement.toDataURL('image/png'))
+      } finally {
+        scene.background = previous.background
+        renderer.setClearAlpha(1)
+        floor.visible = previous.floor
+        renderer.setPixelRatio(previous.ratio)
+        renderer.setSize(clientWidth, clientHeight, false)
+        camera.aspect = clientWidth / Math.max(1, clientHeight)
+        camera.updateProjectionMatrix()
+      }
     },
 
     setPreset(next) {

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useEditor } from '../document/store'
+import { notify } from '../project/notice'
 import { getGarment } from '../templates'
 import { garmentMesh, viewTexture, withMirroredUnderlay } from './garmentModel'
 import type { InflatedMesh } from './inflate'
+import { DEFAULT_SNAPSHOT_SIDE, SNAPSHOT_SIDES, snapshotFileStem } from './snapshot'
 import { createViewer, type CameraPreset, type Viewer } from './viewer'
 
 /** Delay after the last edit before the textures are redrawn. */
@@ -27,6 +29,9 @@ export function Preview3D() {
   const [preset, setPreset] = useState<CameraPreset | null>('front')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [longSide, setLongSide] = useState(DEFAULT_SNAPSHOT_SIDE)
+  const [transparent, setTransparent] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const stage = stageRef.current
@@ -84,6 +89,22 @@ export function Preview3D() {
     viewerRef.current?.setPreset(next)
   }
 
+  const savePng = async () => {
+    const viewer = viewerRef.current
+    const api = window.stitchlab
+    if (!viewer || !api || loading || saving) return
+    setSaving(true)
+    try {
+      const data = viewer.capturePng({ longSide, transparent })
+      const path = await api.saveFile({ format: 'png', defaultName: snapshotFileStem(garment.id, preset), data })
+      if (path) notify(`Exported to ${path}`)
+    } catch (e) {
+      notify(e instanceof Error ? e.message : String(e), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const presets: { id: CameraPreset; label: string }[] = [
     { id: 'front', label: garment.views[0].viewLabel },
     ...(garment.views[1] ? [{ id: 'back' as const, label: garment.views[1].viewLabel }] : []),
@@ -93,7 +114,7 @@ export function Preview3D() {
 
   return (
     <div className="preview3d">
-      <div className="preview3d-stage" ref={stageRef} />
+      <div className="preview3d-stage" ref={stageRef} title="Drag to orbit, scroll to zoom" />
       {(loading || error) && <div className="preview3d-status">{error ? `3D preview failed: ${error}` : 'Building 3D preview…'}</div>}
       <div className="view-tabs" role="toolbar" aria-label="Camera">
         {presets.map((p) => (
@@ -102,7 +123,27 @@ export function Preview3D() {
           </button>
         ))}
       </div>
-      <div className="preview3d-hint">Drag to orbit, scroll to zoom</div>
+      <div className="preview3d-export">
+        <label className="field checkbox" title="Save without the studio backdrop">
+          <input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} />
+          <span>Transparent</span>
+        </label>
+        <select
+          value={longSide}
+          onChange={(e) => setLongSide(Number(e.target.value))}
+          title="Longer edge of the PNG"
+          aria-label="PNG size"
+        >
+          {SNAPSHOT_SIDES.map((side) => (
+            <option key={side} value={side}>
+              {side} px
+            </option>
+          ))}
+        </select>
+        <button className="primary" onClick={() => void savePng()} disabled={loading || saving} title="Save a PNG of this camera">
+          {saving ? 'Saving…' : 'Save PNG'}
+        </button>
+      </div>
     </div>
   )
 }
