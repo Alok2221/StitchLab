@@ -4,6 +4,24 @@ import { CLIP_GARMENT, CLIP_NONE, zoneClip, type Layer, type LayerPatch } from '
 /** Offset of a duplicate on the same view, in template units. */
 export const DUPLICATE_OFFSET = 16
 
+export const DEFAULT_TEXT = 'Your text'
+const MIN_FONT_SIZE = 12
+/** Rough advance width of a bold sans-serif character, in ems. */
+const CHAR_WIDTH_EM = 0.55
+
+/**
+ * Font size for a new text layer: the default text spans about 80% of the print area width
+ * and at most a third of its height. Templates without a print area (footwear) get
+ * a size for a region 40% of the template width, so the text does not cover the whole shoe.
+ */
+export function defaultFontSize(template: GarmentTemplate): number {
+  const area = template.printArea
+  const width = area ? area.width * 0.8 : template.viewBox.width * 0.4
+  const height = area ? area.height / 3 : template.viewBox.height / 3
+  const fit = Math.min(width / (DEFAULT_TEXT.length * CHAR_WIDTH_EM), height)
+  return Math.max(MIN_FONT_SIZE, Math.floor(fit))
+}
+
 /**
  * Where a layer lands when it is copied or moved from one view to another:
  * - onto a mirrored view: mirrored left to right, so a logo by the heel stays by the heel,
