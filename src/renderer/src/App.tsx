@@ -44,6 +44,15 @@ export function App() {
         } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
           e.preventDefault()
           editor.redo()
+        } else if (key === 'c' && editor.selectedLayerId) {
+          e.preventDefault()
+          editor.copyLayer(editor.selectedLayerId)
+        } else if (key === 'v' && editor.clipboard) {
+          e.preventDefault()
+          editor.pasteLayer()
+        } else if (key === 'd' && editor.selectedLayerId) {
+          e.preventDefault()
+          editor.duplicateLayer(editor.selectedLayerId)
         }
         return
       }

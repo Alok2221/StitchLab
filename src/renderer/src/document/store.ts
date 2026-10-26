@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { create } from 'zustand'
 import { defaultGarment, getGarment, getTemplate, type GarmentTemplate } from '../templates'
 import { addColorway, remapColorways, removeColorway, renameColorway, switchColorway } from './colorways'
+import { DEFAULT_TEXT, DUPLICATE_OFFSET, defaultFontSize, placeOnView } from './placement'
 import {
   CLIP_GARMENT,
   colorwayState,
@@ -50,6 +51,15 @@ interface EditorState {
   updateLayer: (id: string, patch: LayerPatch, mergeKey?: string) => void
   removeLayer: (id: string) => void
   moveLayer: (id: string, direction: 'up' | 'down') => void
+  /** Copies a layer onto a view (its own view by default) right above the original. */
+  duplicateLayer: (id: string, viewId?: string) => void
+  /** Moves a layer to another view and shows that view. */
+  moveLayerToView: (id: string, viewId: string) => void
+  /** Layer copied with Ctrl+C, with the garment it came from; UI state, not saved. */
+  clipboard: { layer: Layer; templateId: string } | null
+  copyLayer: (id: string) => void
+  /** Pastes the copied layer onto the active view. */
+  pasteLayer: () => void
   setZonePattern: (zoneId: string, pattern: ZonePattern | null, mergeKey?: string) => void
   addColorway: () => void
   switchColorway: (id: string) => void
@@ -72,10 +82,16 @@ function keepValidView(doc: DesignDocument, s: ViewState): ViewState {
 }
 
 /** Switches to the view a layer operation changes, so undo and redo never act out of sight. */
-function showChangedView<S extends ViewState & { doc: DesignDocument }>(s: S, op: Operation | undefined): S {
+function showChangedView<S extends ViewState & { doc: DesignDocument }>(
+  s: S,
+  op: Operation | undefined,
+  direction: 'undo' | 'redo'
+): S {
   let view: string | undefined
   if (op?.type === 'addLayer' || op?.type === 'removeLayer') view = op.layer.view
-  else if (op?.type === 'updateLayer') view = s.doc.layers.find((l) => l.id === op.id)?.view
+  else if (op?.type === 'updateLayer') {
+    view = (direction === 'undo' ? op.from : op.to).view ?? s.doc.layers.find((l) => l.id === op.id)?.view
+  }
   else if (op?.type === 'moveLayer') view = (s.doc.layers[op.from] ?? s.doc.layers[op.to])?.view
   return view && view !== s.activeViewId ? { ...s, activeViewId: view } : s
 }
@@ -93,10 +109,31 @@ function nextName(layers: Layer[], prefix: string): string {
   return `${prefix} ${n}`
 }
 
+function copyName(layers: Layer[], name: string): string {
+  const used = new Set(layers.map((l) => l.name))
+  if (!used.has(`${name} copy`)) return `${name} copy`
+  let n = 2
+  while (used.has(`${name} copy ${n}`)) n++
+  return `${name} copy ${n}`
+}
+
 export const useEditor = create<EditorState>((set, get) => {
-  const addLayer = (layer: Layer) => {
-    get().dispatch({ type: 'addLayer', layer, index: get().doc.layers.length })
+  const addLayer = (layer: Layer, index = get().doc.layers.length) => {
+    get().dispatch({ type: 'addLayer', layer, index })
     set({ selectedLayerId: layer.id, selectedZoneId: null })
+  }
+
+  /** A copy of `layer` placed on `to`; on the layer's own view it is offset and renamed. */
+  const placedCopy = (layer: Layer, from: GarmentTemplate, to: GarmentTemplate): Layer => {
+    const same = from.id === to.id && from.view === to.view
+    const placed = placeOnView(layer, from, to)
+    return {
+      ...layer,
+      ...placed,
+      ...(same ? { x: layer.x + DUPLICATE_OFFSET, y: layer.y + DUPLICATE_OFFSET } : {}),
+      id: crypto.randomUUID(),
+      name: same ? copyName(get().doc.layers, layer.name) : layer.name
+    } as Layer
   }
 
   const applyHistoryStep = (s: EditorState, next: { doc: DesignDocument; history: History }) => ({
@@ -134,8 +171,10 @@ export const useEditor = create<EditorState>((set, get) => {
     markSaved: (filePath, revision) => set({ filePath, savedRevision: revision }),
 
     dispatch: (op) => set((s) => applyHistoryStep(s, commit(s.doc, s.history, op))),
-    undo: () => set((s) => applyHistoryStep(showChangedView(s, s.history.past.at(-1)), undo(s.doc, s.history))),
-    redo: () => set((s) => applyHistoryStep(showChangedView(s, s.history.future[0]), redo(s.doc, s.history))),
+    undo: () =>
+      set((s) => applyHistoryStep(showChangedView(s, s.history.past.at(-1), 'undo'), undo(s.doc, s.history))),
+    redo: () =>
+      set((s) => applyHistoryStep(showChangedView(s, s.history.future[0], 'redo'), redo(s.doc, s.history))),
     selectZone: (selectedZoneId) => set({ selectedZoneId, selectedLayerId: null }),
     selectLayer: (selectedLayerId) => set({ selectedLayerId, selectedZoneId: null }),
     setActiveView: (viewId) => set((s) => keepValidView(s.doc, { ...s, activeViewId: viewId })),
@@ -213,9 +252,9 @@ export const useEditor = create<EditorState>((set, get) => {
         visible: true,
         locked: false,
         clip: CLIP_GARMENT,
-        text: 'Your text',
+        text: DEFAULT_TEXT,
         fontFamily: 'Arial',
-        fontSize: Math.round(Math.max(16, area.width / 4)),
+        fontSize: defaultFontSize(template),
         fontWeight: 'bold',
         fill: '#1f1f22'
       }
@@ -270,6 +309,42 @@ export const useEditor = create<EditorState>((set, get) => {
       while (to >= 0 && to < layers.length && layers[to].view !== layers[from].view) to += step
       if (to < 0 || to >= layers.length) return
       get().dispatch({ type: 'moveLayer', from, to })
+    },
+
+    duplicateLayer: (id, viewId) => {
+      const { doc } = get()
+      const index = doc.layers.findIndex((l) => l.id === id)
+      if (index < 0) return
+      const layer = doc.layers[index]
+      const from = getTemplate(doc.templateId, layer.view)
+      const to = getTemplate(doc.templateId, viewId ?? layer.view)
+      addLayer(placedCopy(layer, from, to), index + 1)
+      set((s) => keepValidView(s.doc, { ...s, activeViewId: to.view }))
+    },
+
+    moveLayerToView: (id, viewId) => {
+      const { doc } = get()
+      const layer = doc.layers.find((l) => l.id === id)
+      const to = getTemplate(doc.templateId, viewId)
+      if (!layer || layer.view === to.view) return
+      get().updateLayer(id, placeOnView(layer, getTemplate(doc.templateId, layer.view), to))
+      set((s) => keepValidView(s.doc, { ...s, activeViewId: to.view, selectedLayerId: id }))
+    },
+
+    clipboard: null,
+    copyLayer: (id) => {
+      const { doc } = get()
+      const layer = doc.layers.find((l) => l.id === id)
+      if (layer) set({ clipboard: { layer, templateId: doc.templateId } })
+    },
+    pasteLayer: () => {
+      const { clipboard, doc } = get()
+      if (!clipboard) return
+      const from = getTemplate(clipboard.templateId, clipboard.layer.view)
+      const copy = placedCopy(clipboard.layer, from, activeTemplate())
+      addLayer(copy)
+      // The next paste starts from this copy, so repeated pastes cascade instead of stacking exactly.
+      set({ clipboard: { layer: copy, templateId: doc.templateId } })
     }
   }
 })

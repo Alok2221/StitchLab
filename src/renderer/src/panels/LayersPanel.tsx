@@ -1,12 +1,15 @@
 import { useRef, type ChangeEvent } from 'react'
 import { useCurrentTemplate, useEditor, useViewLayers } from '../document/store'
+import { getGarment } from '../templates'
 import { IMAGE_ACCEPT, readImage } from './readImage'
 
 export function LayersPanel() {
   const layers = useViewLayers()
   const template = useCurrentTemplate()
   const selectedLayerId = useEditor((s) => s.selectedLayerId)
-  const { selectLayer, addTextLayer, addImageLayer, updateLayer, removeLayer, moveLayer } = useEditor.getState()
+  const otherViews = useEditor((s) => getGarment(s.doc.templateId).views).filter((v) => v.view !== template.view)
+  const { selectLayer, addTextLayer, addImageLayer, updateLayer, removeLayer, moveLayer, duplicateLayer, moveLayerToView } =
+    useEditor.getState()
   const fileInput = useRef<HTMLInputElement>(null)
 
   const selectedIndex = layers.findIndex((l) => l.id === selectedLayerId)
@@ -85,6 +88,24 @@ export function LayersPanel() {
           <button className="danger" onClick={() => removeLayer(selectedLayerId)}>
             Delete
           </button>
+        </div>
+      )}
+
+      {selectedLayerId && (
+        <div className="layer-actions">
+          <button onClick={() => duplicateLayer(selectedLayerId)} title="Duplicate (Ctrl+D)">
+            Duplicate
+          </button>
+          {otherViews.map((v) => (
+            <span key={v.view} className="layer-view-actions">
+              <button onClick={() => duplicateLayer(selectedLayerId, v.view)} title={`Copy to the ${v.viewLabel.toLowerCase()}`}>
+                Copy to {v.viewLabel}
+              </button>
+              <button onClick={() => moveLayerToView(selectedLayerId, v.view)} title={`Move to the ${v.viewLabel.toLowerCase()}`}>
+                Move
+              </button>
+            </span>
+          ))}
         </div>
       )}
     </section>
