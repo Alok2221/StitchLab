@@ -156,10 +156,168 @@ export interface InflatedMesh {
   indices: Uint32Array
   /** Indices `[0, frontIndexCount)` draw the front, the rest the back. */
   frontIndexCount: number
+  /** Vertices `[0, vertexCount)` are the front, `[vertexCount, 2 * vertexCount)` the back. */
+  vertexCount: number
+}
+
+const NEIGHBOR8 = [
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1]
+]
+
+/** Soften steps between parts. Outside the mask stays empty, so a gap between two legs is kept. */
+export function smoothHeight(height: Float32Array, mask: Uint8Array, grid: Grid, passes = 2): Float32Array {
+  const w = grid.cols + 1
+  const h = grid.rows + 1
+  let current = height
+  for (let pass = 0; pass < passes; pass++) {
+    const next = current.slice()
+    for (let j = 0; j < h; j++) {
+      for (let i = 0; i < w; i++) {
+        const k = j * w + i
+        if (!mask[k]) continue
+        let sum = current[k]
+        let n = 1
+        for (const [di, dj] of NEIGHBOR8) {
+          const ii = i + di
+          const jj = j + dj
+          if (ii < 0 || jj < 0 || ii >= w || jj >= h || !mask[jj * w + ii]) continue
+          sum += current[jj * w + ii]
+          n++
+        }
+        next[k] = sum / n
+      }
+    }
+    current = next
+  }
+  return current
 }
 
 /**
- * Closed, inflated surface of a garment: the front view faces +z, the back view faces -z.
+ * The rim sits just outside the mask. Give it the thickness of the cloth it touches and
+ * at least a fraction of a cell, so the side wall has area instead of a razor edge you can see through.
+ */
+function extendToRim(height: Float32Array, mask: Uint8Array, grid: Grid, floor: number): Float32Array {
+  const w = grid.cols + 1
+  const h = grid.rows + 1
+  let out = height.slice()
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i
+      if (mask[k]) continue
+      let best = 0
+      for (const [di, dj] of NEIGHBOR8) {
+        const ii = i + di
+        const jj = j + dj
+        if (ii < 0 || jj < 0 || ii >= w || jj >= h) continue
+        const nk = jj * w + ii
+        if (mask[nk] && height[nk] > best) best = height[nk]
+      }
+      out[k] = best > 0 ? Math.max(best, floor) : 0
+    }
+  }
+  // Even the rim out, so the side is one band instead of a rib per grid row.
+  for (let pass = 0; pass < 10; pass++) {
+    const next = out.slice()
+    for (let j = 0; j < h; j++) {
+      for (let i = 0; i < w; i++) {
+        const k = j * w + i
+        if (mask[k] || out[k] === 0) continue
+        let sum = out[k]
+        let n = 1
+        for (const [di, dj] of NEIGHBOR8) {
+          const ii = i + di
+          const jj = j + dj
+          if (ii < 0 || jj < 0 || ii >= w || jj >= h) continue
+          const nk = jj * w + ii
+          if (!mask[nk] && out[nk] > 0) {
+            sum += out[nk]
+            n++
+          }
+        }
+        next[k] = Math.max(sum / n, floor)
+      }
+    }
+    out = next
+  }
+  return out
+}
+
+/**
+ * Wall along the open rim: front vertices stay, and copies of the back positions keep the front UV
+ * so the edge shows the outline instead of a smear of the mirrored back.
+ * Returns indices with the wall included in the front range.
+ */
+function closeRim(indices: Uint32Array, frontIndexCount: number, positions: Float32Array, uvs: Float32Array, vertexCount: number): InflatedMesh {
+  const uses = new Map<string, number>()
+  const mark = (a: number, b: number) => uses.set(`${a},${b}`, (uses.get(`${a},${b}`) ?? 0) + 1)
+  for (let t = 0; t < frontIndexCount; t += 3) {
+    mark(indices[t], indices[t + 1])
+    mark(indices[t + 1], indices[t + 2])
+    mark(indices[t + 2], indices[t])
+  }
+
+  const extraPos: number[] = []
+  const extraUv: number[] = []
+  const frontOf = new Map<number, number>()
+  const backOf = new Map<number, number>()
+  // Just inside the outline, so the side samples the cloth and not the dark stroke.
+  const fabric = (n: number): [number, number] => {
+    const u = uvs[n * 2]
+    const v = uvs[n * 2 + 1]
+    const du = 0.5 - u
+    const dv = 0.5 - v
+    const len = Math.hypot(du, dv) || 1
+    const shift = 0.008
+    return [u + (du / len) * shift, v + (dv / len) * shift]
+  }
+  const addCopy = (n: number, source: number, into: Map<number, number>) => {
+    const existing = into.get(n)
+    if (existing !== undefined) return existing
+    const created = vertexCount * 2 + frontOf.size + backOf.size
+    into.set(n, created)
+    extraPos.push(positions[source], positions[source + 1], positions[source + 2])
+    extraUv.push(...fabric(n))
+    return created
+  }
+
+  const walls: number[] = []
+  for (const key of uses.keys()) {
+    const comma = key.indexOf(',')
+    const a = Number(key.slice(0, comma))
+    const b = Number(key.slice(comma + 1))
+    if (uses.has(`${b},${a}`)) continue
+    if (Math.abs(positions[a * 3 + 2]) < 1e-4 && Math.abs(positions[b * 3 + 2]) < 1e-4) continue
+    const fa = addCopy(a, a * 3, frontOf)
+    const fb = addCopy(b, b * 3, frontOf)
+    const ba = addCopy(a, (a + vertexCount) * 3, backOf)
+    const bb = addCopy(b, (b + vertexCount) * 3, backOf)
+    walls.push(fa, bb, fb, fa, ba, bb)
+  }
+  if (walls.length === 0) return { positions, uvs, indices, frontIndexCount, vertexCount }
+
+  const positionsOut = new Float32Array(positions.length + extraPos.length)
+  positionsOut.set(positions)
+  positionsOut.set(extraPos, positions.length)
+  const uvsOut = new Float32Array(uvs.length + extraUv.length)
+  uvsOut.set(uvs)
+  uvsOut.set(extraUv, uvs.length)
+  const indicesOut = new Uint32Array(indices.length + walls.length)
+  indicesOut.set(indices.subarray(0, frontIndexCount))
+  indicesOut.set(walls, frontIndexCount)
+  indicesOut.set(indices.subarray(frontIndexCount), frontIndexCount + walls.length)
+  return { positions: positionsOut, uvs: uvsOut, indices: indicesOut, frontIndexCount: frontIndexCount + walls.length, vertexCount }
+}
+
+/**
+ * Closed, inflated surface of a garment: the front view faces +z, the back view faces -z,
+ * and a wall joins them along the outline so the side is not a hole.
  * The back texture is mirrored left to right because the back view is drawn as seen from behind.
  * Grid cells touching the garment are kept, and their outside corners are pulled onto the outline.
  */
@@ -167,7 +325,8 @@ export function inflate(coverage: Coverage, grid: Grid, options: InflateOptions,
   const w = grid.cols + 1
   const h = grid.rows + 1
   const mask = maskFor(coverage, grid)
-  height ??= heightField(mask, grid, options)
+  const floor = Math.max(grid.step * 1.1, options.maxDepth * 0.28)
+  height = extendToRim(height ? height.slice() : heightField(mask, grid, options), mask, grid, floor)
 
   const cells: number[] = []
   const used = new Uint8Array(w * h)
@@ -223,5 +382,5 @@ export function inflate(coverage: Coverage, grid: Grid, options: InflateOptions,
     indices.set([p, q, r, q, s, r], t)
     t += 6
   }
-  return { positions, uvs, indices, frontIndexCount }
+  return closeRim(indices, frontIndexCount, positions, uvs, count)
 }

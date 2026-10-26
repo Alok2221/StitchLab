@@ -106,10 +106,10 @@ describe('combinedHeight', () => {
 describe('inflate', () => {
   const options = { roundness: 0.5, maxDepth: 100 }
   const mesh = inflate(rect(10.6, 5.6, 50.4, 15.4), grid, options)
-  const count = mesh.positions.length / 6
+  const count = mesh.vertexCount
 
   it('builds a front and a mirrored back surface', () => {
-    expect(mesh.uvs.length / 2).toBe(count * 2)
+    expect(mesh.uvs.length / 2).toBeGreaterThanOrEqual(count * 2)
     for (let n = 0; n < count; n++) {
       expect(mesh.positions[n * 3 + 2]).toBeGreaterThanOrEqual(0)
       expect(mesh.positions[(n + count) * 3 + 2]).toBe(-mesh.positions[n * 3 + 2])
@@ -125,9 +125,9 @@ describe('inflate', () => {
   })
 
   it('keeps only cells touching the garment, with valid indices', () => {
-    expect(mesh.indices.length).toBe(2 * mesh.frontIndexCount)
-    expect(mesh.frontIndexCount).toBe(41 * 11 * 6)
-    expect(Math.max(...mesh.indices)).toBe(count * 2 - 1)
+    expect(mesh.indices.length - mesh.frontIndexCount).toBe(41 * 11 * 6)
+    expect(mesh.frontIndexCount).toBeGreaterThan(41 * 11 * 6)
+    expect(Math.max(...mesh.indices)).toBe(mesh.positions.length / 3 - 1)
   })
 
   it('faces the front towards +z and the back towards -z', () => {
@@ -138,20 +138,39 @@ describe('inflate', () => {
       ])
       return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
     }
-    expect(normalZ(mesh.frontIndexCount / 2)).toBeGreaterThan(0)
-    expect(normalZ(mesh.frontIndexCount + mesh.frontIndexCount / 2)).toBeLessThan(0)
+    expect(normalZ(0)).toBeGreaterThan(0)
+    expect(normalZ(mesh.frontIndexCount)).toBeLessThan(0)
+  })
+
+  it('caps the rim with a wall that faces outward', () => {
+    let crosses = 0
+    let outward = 0
+    const cx = 30.5
+    const cy = -10.5
+    for (let t = 0; t < mesh.indices.length; t += 3) {
+      const ids = [mesh.indices[t], mesh.indices[t + 1], mesh.indices[t + 2]]
+      const p = ids.map((i) => [mesh.positions[i * 3], mesh.positions[i * 3 + 1], mesh.positions[i * 3 + 2]])
+      const z0 = Math.min(p[0][2], p[1][2], p[2][2])
+      const z1 = Math.max(p[0][2], p[1][2], p[2][2])
+      if (z1 <= 0.05 || z0 >= -0.05) continue
+      crosses++
+      const e1 = [p[1][0] - p[0][0], p[1][1] - p[0][1], p[1][2] - p[0][2]]
+      const e2 = [p[2][0] - p[0][0], p[2][1] - p[0][1], p[2][2] - p[0][2]]
+      const normal = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2]]
+      const mid = [(p[0][0] + p[1][0] + p[2][0]) / 3, (p[0][1] + p[1][1] + p[2][1]) / 3]
+      if (normal[0] * (mid[0] - cx) + normal[1] * (mid[1] - cy) > 0) outward++
+    }
+    expect(crosses).toBeGreaterThan(0)
+    expect(outward).toBe(crosses)
   })
 
   it('pulls the seam onto the outline', () => {
     const round = inflate(circle(30, 10, 7.3), grid, options)
-    const n = round.positions.length / 6
-    const seam: number[] = []
-    for (let k = 0; k < n; k++) {
-      if (round.positions[k * 3 + 2] !== 0) continue
-      seam.push(Math.hypot(round.positions[k * 3] - 30, -round.positions[k * 3 + 1] - 10))
+    const dist: number[] = []
+    for (let k = 0; k < round.vertexCount; k++) {
+      dist.push(Math.hypot(round.positions[k * 3] - 30, -round.positions[k * 3 + 1] - 10))
     }
-    expect(seam.length).toBeGreaterThan(20)
-    for (const d of seam) expect(d).toBeLessThan(7.3 + 0.01)
-    expect(seam.filter((d) => Math.abs(d - 7.3) < 0.05).length / seam.length).toBeGreaterThan(0.9)
+    expect(Math.max(...dist)).toBeLessThan(7.3 + 0.2)
+    expect(dist.filter((d) => Math.abs(d - 7.3) < 0.2).length).toBeGreaterThan(20)
   })
 })

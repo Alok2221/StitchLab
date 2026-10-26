@@ -56,7 +56,14 @@ const PRESET_DIRECTIONS: Record<CameraPreset, Vector3> = {
 }
 
 function garmentMaterial() {
-  return new MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0, side: DoubleSide })
+  return new MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.85,
+    metalness: 0,
+    side: DoubleSide,
+    transparent: true,
+    alphaTest: 0.02
+  })
 }
 
 function applyLight(light: DirectionalLight, spec: Lighting['key'] | Lighting['fill']) {

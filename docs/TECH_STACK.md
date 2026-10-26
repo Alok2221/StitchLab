@@ -105,22 +105,17 @@ Preview shows this sheet as an image, and PNG / SVG export can save it instead
 of separate files. PNG sheets are scaled down when they would exceed the
 canvas size Chromium can encode.
 
-**3D preview** - `src/renderer/src/preview3d/` inflates every garment from its
-2D views. Each garment part is inflated on its own, so two trouser legs stay
-two legs instead of one membrane across the crotch, and a sleeve is only as
-thick as the sleeve. A pressure field (Δp = −1 inside, p = 0 on the outline)
-gives a round cross-section whose depth is half the local width, capped per
-category so a tote stays almost flat and a sneaker stays round. The seam sits just
-inside the drawn outline so the texture's dark stroke is not stretched along
-the edge. The front view is mapped onto the +z surface, the back view
-(mirrored, because it is drawn as seen from behind) onto −z; where the two
-outlines differ, such as a hood, the other view is used as an underlay. The
-preview sits in the same canvas as the 2D editor, with orbit, zoom, studio
-lighting (studio, soft, outdoor) and cameras for the front, the back, the side and a three-quarter
-view. Three.js is loaded only when the 3D mode is first opened. Save PNG
-renders the same camera off-screen at 1024, 2048 or 4096 px on the long
-side and writes it through the existing file dialog; a transparent
-background hides the studio backdrop and the floor shadow.
+**3D preview** - `src/renderer/src/preview3d/` loads a CC0 GLB shell per garment
+(`meshes/`, see `meshes/LICENSE.md`) and maps the flat design onto it with
+planar front/back UVs (`loadMesh.ts`). Hangers and hooks are stripped by
+material name. If a garment has no mesh, the older inflate path still builds a
+silhouette shell. Where front and back outlines differ, the other view is used
+as an underlay. The preview sits in the same canvas as the 2D editor, with
+orbit, zoom, studio lighting (studio, soft, outdoor) and cameras for the front,
+the back, the side and a three-quarter view. Three.js is loaded only when the
+3D mode is first opened. Save PNG renders the same camera off-screen at 1024,
+2048 or 4096 px on the long side and writes it through the existing file
+dialog; a transparent background hides the studio backdrop and the floor shadow.
 
 The renderer never touches the file system; it sends the bytes to the main
 process, which shows the dialog, validates the request and writes the files.
@@ -171,7 +166,7 @@ src/
       document/     document model, operations, store
       panels/       React UI around the canvas
       templates/    garment SVG templates and parser
-      preview3d/    Three.js preview, inflated from the 2D templates
+      preview3d/    Three.js preview (CC0 GLB shells + planar UV)
 docs/
 ```
 

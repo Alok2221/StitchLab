@@ -1,22 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
 import { garments } from '../templates'
-import { coverageFromAlpha, erodeAlpha, inflateOptions, silhouetteSvg } from './garmentModel'
-
-describe('erodeAlpha', () => {
-  it('shrinks a shape by the radius on every side', () => {
-    // 7 x 5 image with an opaque 5 x 3 block in the middle.
-    const alpha = new Uint8Array(35)
-    for (let j = 1; j <= 3; j++) for (let i = 1; i <= 5; i++) alpha[j * 7 + i] = 255
-    const eroded = erodeAlpha(alpha, 7, 5, 1)
-    expect([...eroded].map((a, k) => (a ? k : -1)).filter((k) => k >= 0)).toEqual([16, 17, 18])
-  })
-
-  it('leaves the image alone for a radius under one pixel', () => {
-    const alpha = new Uint8Array([255])
-    expect(erodeAlpha(alpha, 1, 1, 0)).toBe(alpha)
-  })
-})
+import { coverageFromAlpha, inflateOptions, silhouetteSvg } from './garmentModel'
 
 describe('coverageFromAlpha', () => {
   // 2 x 1 image of a 2 x 1 viewBox: left pixel opaque, right transparent.
@@ -48,5 +33,13 @@ describe('inflateOptions', () => {
     const byCategory = (c: string) => inflateOptions(garments.find((g) => g.category === c)!.views[0])
     expect(byCategory('footwear').roundness).toBeGreaterThan(byCategory('tops').roundness)
     expect(byCategory('bags').roundness).toBeLessThan(byCategory('tops').roundness)
+    expect(byCategory('dresses').roundness).toBeLessThan(byCategory('bottoms').roundness)
+  })
+
+  it('caps depth by the short side, so a tall garment stays slim', () => {
+    const trousers = garments.find((g) => g.id === 'trousers')!.views[0]
+    const span = Math.min(trousers.viewBox.width, trousers.viewBox.height)
+    expect(inflateOptions(trousers).maxDepth).toBeLessThanOrEqual(span * 0.085)
+    expect(inflateOptions(trousers).maxDepth).toBeLessThan(trousers.viewBox.height * 0.07)
   })
 })

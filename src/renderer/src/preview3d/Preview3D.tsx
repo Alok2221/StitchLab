@@ -2,23 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { useEditor } from '../document/store'
 import { notify } from '../project/notice'
 import { getGarment } from '../templates'
-import { garmentMesh, viewTexture, withMirroredUnderlay } from './garmentModel'
+import { fabricColorFor, garmentMesh, viewTexture, withMirroredUnderlay } from './garmentModel'
 import type { InflatedMesh } from './inflate'
 import { LIGHTING_LABELS, type LightingPreset } from './lighting'
 import { DEFAULT_SNAPSHOT_SIDE, SNAPSHOT_SIDES, snapshotFileStem } from './snapshot'
+import { fitTextureForMesh } from './textureFit'
 import { createViewer, type CameraPreset, type Viewer } from './viewer'
 
 /** Delay after the last edit before the textures are redrawn. */
 const UPDATE_DELAY_MS = 120
 
+/** Bumped when the mesh builder changes, so a hot reload does not keep the old shell. */
+const MESH_VERSION = 6
 const meshes = new Map<string, Promise<InflatedMesh>>()
 
 function cachedMesh(garmentId: string): Promise<InflatedMesh> {
-  let mesh = meshes.get(garmentId)
+  const key = `${MESH_VERSION}:${garmentId}`
+  let mesh = meshes.get(key)
   if (!mesh) {
     mesh = garmentMesh(getGarment(garmentId))
-    mesh.catch(() => meshes.delete(garmentId))
-    meshes.set(garmentId, mesh)
+    mesh.catch(() => meshes.delete(key))
+    meshes.set(key, mesh)
   }
   return mesh
 }
@@ -51,6 +55,7 @@ export function Preview3D() {
       const { doc } = useEditor.getState()
       const views = getGarment(doc.templateId).views
       try {
+        const garment = getGarment(doc.templateId)
         const [mesh, front, back] = await Promise.all([
           shownGarment === doc.templateId ? null : cachedMesh(doc.templateId),
           viewTexture(doc, views[0]),
@@ -62,7 +67,11 @@ export function Preview3D() {
           shownGarment = doc.templateId
           setPreset('front')
         }
-        viewer.setTextures(withMirroredUnderlay(front, back), withMirroredUnderlay(back, front))
+        const fabric = fabricColorFor(doc, garment)
+        viewer.setTextures(
+          fitTextureForMesh(front, back, fabric, withMirroredUnderlay),
+          fitTextureForMesh(back, front, fabric, withMirroredUnderlay)
+        )
         setLoading(false)
         setError(null)
       } catch (e) {
