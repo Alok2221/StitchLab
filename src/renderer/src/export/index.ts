@@ -1,6 +1,7 @@
 import type { ExportFormat } from '../../../shared/api'
 import { resolvedColorways, withColorway, type Colorway, type DesignDocument } from '../document/model'
 import type { GarmentTemplate } from '../templates/parseTemplate'
+import { lookbookScale, lookbookSvg } from './lookbook'
 import { buildPdf, type PdfRender, type PdfSheet } from './pdf'
 import { svgToPng } from './raster'
 import { documentToSvg } from './svg'
@@ -16,6 +17,8 @@ export interface ExportOptions {
   allColorways?: boolean
   /** Export every view of the garment instead of only the one on the canvas. */
   allViews?: boolean
+  /** PNG / SVG: put every exported view and colorway on one lookbook sheet instead of separate files. */
+  combine?: boolean
 }
 
 export function exportSize(template: GarmentTemplate, scale: number) {
@@ -64,6 +67,13 @@ export async function renderImage(
   return svgToPng(svg, { width, height, scale: pngScale })
 }
 
+/** Lookbook sheet with the given views side by side, one row per colorway. */
+export function renderLookbook(doc: DesignDocument, views: GarmentTemplate[], colorways: Colorway[], background: string | null) {
+  const named = doc.colorways.length > 1
+  const rows = colorways.map((c) => ({ name: named ? c.name : null, doc: withColorway(doc, c.id) }))
+  return lookbookSvg(views, rows, { background })
+}
+
 export async function renderPdf(doc: DesignDocument, views: GarmentTemplate[], allColorways: boolean): Promise<Uint8Array> {
   const colorways = resolvedColorways(doc)
   const selected = allColorways ? colorways : colorways.filter((c) => c.id === doc.activeColorwayId)
@@ -100,6 +110,20 @@ export async function exportDesign(
           ? `${active.id}-${active.view}-colorways`
           : colorwayFileStem(active, named ? activeColorway : null)
     const path = await api.saveFile({ format: 'pdf', defaultName: stem, data })
+    return path && `Exported to ${path}`
+  }
+
+  if (options.combine && selectedViews.length * selectedColorways.length > 1) {
+    const sheet = renderLookbook(doc, selectedViews, selectedColorways, options.background)
+    const data =
+      options.format === 'png'
+        ? await svgToPng(sheet.svg, {
+            width: sheet.width,
+            height: sheet.height,
+            scale: lookbookScale(sheet.width, sheet.height, options.pngScale)
+          })
+        : sheet.svg
+    const path = await api.saveFile({ format: options.format, defaultName: `${active.id}-lookbook`, data })
     return path && `Exported to ${path}`
   }
 
