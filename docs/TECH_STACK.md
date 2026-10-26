@@ -115,7 +115,10 @@ the edge. The front view is mapped onto the +z surface, the back view
 outlines differ, such as a hood, the other view is used as an underlay. The
 preview sits in the same canvas as the 2D editor, with orbit, zoom, studio
 lighting and cameras for the front, the back, the side and a three-quarter
-view. Three.js is loaded only when the 3D mode is first opened.
+view. Three.js is loaded only when the 3D mode is first opened. Save PNG
+renders the same camera off-screen at 1024, 2048 or 4096 px on the long
+side and writes it through the existing file dialog; a transparent
+background hides the studio backdrop and the floor shadow.
 
 The renderer never touches the file system; it sends the bytes to the main
 process, which shows the dialog, validates the request and writes the files.
