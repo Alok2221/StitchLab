@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gridFor, heightField, inflate, maskFor, pressureField, type Coverage, type Grid } from './inflate'
+import { combinedHeight, gridFor, heightField, inflate, maskFor, pressureField, type Coverage, type Grid } from './inflate'
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
@@ -75,6 +75,31 @@ describe('heightField', () => {
     const height = heightField(mask, stripGrid, { roundness: 1, maxDepth: 3 })
     expect(Math.max(...height)).toBeLessThan(3)
     expect(Math.max(...height)).toBeGreaterThan(2.9)
+  })
+})
+
+describe('combinedHeight', () => {
+  const options = { roundness: 1, maxDepth: 1000 }
+  const left = maskFor(rect(2.6, 2.6, 28.4, 17.4), grid)
+  const right = maskFor(rect(32.6, 2.6, 58.4, 17.4), grid)
+
+  it('keeps a gap between two parts empty', () => {
+    const height = combinedHeight([left, right], grid, options)
+    expect(height[10 * (grid.cols + 1) + 30]).toBe(0)
+    expect(height[10 * (grid.cols + 1) + 15]).toBeGreaterThan(5)
+    expect(height[10 * (grid.cols + 1) + 45]).toBeGreaterThan(5)
+  })
+
+  it('puts a crease where two parts share an edge, instead of one wide lobe', () => {
+    const touching = combinedHeight(
+      [maskFor(rect(2.6, 2.6, 30.4, 17.4), grid), maskFor(rect(29.6, 2.6, 58.4, 17.4), grid)],
+      grid,
+      options
+    )
+    const w = grid.cols + 1
+    expect(touching[10 * w + 15]).toBeGreaterThan(5)
+    expect(touching[10 * w + 30]).toBeLessThan(touching[10 * w + 15] * 0.5)
+    expect(touching[10 * w + 45]).toBeGreaterThan(touching[10 * w + 30])
   })
 })
 

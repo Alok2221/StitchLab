@@ -86,6 +86,20 @@ export function heightField(mask: Uint8Array, grid: Grid, { roundness, maxDepth 
   return height
 }
 
+/**
+ * Height of a garment made of separate parts, such as two trouser legs: each part puffs to half
+ * its own width, and overlapping parts take the thicker of the two. A gap between parts stays empty.
+ */
+export function combinedHeight(masks: Uint8Array[], grid: Grid, options: InflateOptions): Float32Array {
+  const height = new Float32Array((grid.cols + 1) * (grid.rows + 1))
+  for (const mask of masks) {
+    if (!mask.includes(1)) continue
+    const part = heightField(mask, grid, options)
+    for (let k = 0; k < height.length; k++) if (part[k] > height[k]) height[k] = part[k]
+  }
+  return height
+}
+
 const NEIGHBORS = [
   [-1, -1],
   [0, -1],
@@ -149,11 +163,11 @@ export interface InflatedMesh {
  * The back texture is mirrored left to right because the back view is drawn as seen from behind.
  * Grid cells touching the garment are kept, and their outside corners are pulled onto the outline.
  */
-export function inflate(coverage: Coverage, grid: Grid, options: InflateOptions): InflatedMesh {
+export function inflate(coverage: Coverage, grid: Grid, options: InflateOptions, height?: Float32Array): InflatedMesh {
   const w = grid.cols + 1
   const h = grid.rows + 1
   const mask = maskFor(coverage, grid)
-  const height = heightField(mask, grid, options)
+  height ??= heightField(mask, grid, options)
 
   const cells: number[] = []
   const used = new Uint8Array(w * h)

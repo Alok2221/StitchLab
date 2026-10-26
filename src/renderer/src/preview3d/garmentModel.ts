@@ -2,7 +2,8 @@ import type { DesignDocument } from '../document/model'
 import { svgToCanvas } from '../export/raster'
 import { documentToSvg, escapeXml } from '../export/svg'
 import type { Garment, GarmentTemplate, Rect } from '../templates'
-import { gridFor, inflate, type Coverage, type InflatedMesh, type InflateOptions } from './inflate'
+import type { TemplateZone } from '../templates/parseTemplate'
+import { combinedHeight, gridFor, inflate, maskFor, type Coverage, type InflatedMesh, type InflateOptions } from './inflate'
 
 /** Grid samples along the long side of a template. */
 const GRID_SAMPLES = 200
@@ -30,10 +31,10 @@ export function inflateOptions(template: GarmentTemplate): InflateOptions {
   }
 }
 
-/** The garment parts of one view filled black, including the outline drawn around them. */
-export function silhouetteSvg(template: GarmentTemplate): string {
+/** The given parts of a view filled black, including the outline drawn around them. */
+export function silhouetteSvg(template: GarmentTemplate, zones: TemplateZone[] = template.zones): string {
   const { x, y, width, height } = template.viewBox
-  const paths = template.zones
+  const paths = zones
     .map(
       (z) =>
         `<path d="${escapeXml(z.path)}" fill="#000" stroke="#000" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" />`
@@ -78,29 +79,61 @@ export function coverageFromAlpha(alpha: Uint8Array, width: number, height: numb
   }
 }
 
-async function silhouetteCoverage(template: GarmentTemplate, scale: number): Promise<Coverage> {
+async function zoneCoverage(template: GarmentTemplate, zones: TemplateZone[], scale: number, inset: boolean): Promise<Coverage> {
   const { width, height } = template.viewBox
-  const canvas = await svgToCanvas(silhouetteSvg(template), { width, height, scale })
+  const canvas = await svgToCanvas(silhouetteSvg(template, zones), { width, height, scale })
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 2D context is not available')
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const alpha = new Uint8Array(canvas.width * canvas.height)
   for (let k = 0; k < alpha.length; k++) alpha[k] = pixels[k * 4 + 3]
   const pxPerUnit = canvas.width / width
-  const eroded = erodeAlpha(alpha, canvas.width, canvas.height, Math.round(SEAM_INSET * pxPerUnit))
-  return coverageFromAlpha(eroded, canvas.width, canvas.height, template.viewBox, pxPerUnit)
+  const shrunk = inset ? erodeAlpha(alpha, canvas.width, canvas.height, Math.round(SEAM_INSET * pxPerUnit)) : alpha
+  return coverageFromAlpha(shrunk, canvas.width, canvas.height, template.viewBox, pxPerUnit)
 }
 
-/** Inflated body of a garment: the first view is the front, the second (if any) the back, seen from behind. */
+function maxCoverage(parts: Coverage[]): Coverage {
+  return (x, y) => parts.reduce((m, c) => Math.max(m, c(x, y)), 0)
+}
+
+/** Inflated body of a garment: each part puffs on its own, so legs and sleeves stay separate. */
 export async function garmentMesh(garment: Garment): Promise<InflatedMesh> {
   const [front, back] = garment.views
   const grid = gridFor(front.viewBox, GRID_SAMPLES)
   const scale = SILHOUETTE_OVERSAMPLE / grid.step
-  const frontCoverage = await silhouetteCoverage(front, scale)
-  if (!back) return inflate(frontCoverage, grid, inflateOptions(front))
-  const backCoverage = await silhouetteCoverage(back, scale)
-  const mirror = 2 * grid.x + grid.width
-  return inflate((x, y) => Math.max(frontCoverage(x, y), backCoverage(mirror - x, y)), grid, inflateOptions(front))
+  const options = inflateOptions(front)
+  const axis = 2 * grid.x + grid.width
+  const ids = [...new Set(garment.views.flatMap((view) => view.zones.map((z) => z.id)))]
+
+  const [frontUnion, backUnion, parts] = await Promise.all([
+    zoneCoverage(front, front.zones, scale, true),
+    back ? zoneCoverage(back, back.zones, scale, true) : Promise.resolve(null),
+    Promise.all(
+      ids.map(async (id) => {
+        const pieces = await Promise.all(
+          garment.views.map(async (view, index) => {
+            const zone = view.zones.find((z) => z.id === id)
+            if (!zone) return null
+            const coverage = await zoneCoverage(view, [zone], scale, false)
+            return index === 0 ? coverage : ((x: number, y: number) => coverage(axis - x, y))
+          })
+        )
+        return maxCoverage(pieces.filter((c): c is Coverage => c !== null))
+      })
+    )
+  ])
+
+  const outline = backUnion ? maxCoverage([frontUnion, (x, y) => backUnion(axis - x, y)]) : frontUnion
+  return inflate(
+    outline,
+    grid,
+    options,
+    combinedHeight(
+      parts.map((part) => maskFor(part, grid)),
+      grid,
+      options
+    )
+  )
 }
 
 /** One view as it looks in the editor, on a transparent background. */

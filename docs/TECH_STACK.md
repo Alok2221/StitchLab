@@ -106,9 +106,11 @@ of separate files. PNG sheets are scaled down when they would exceed the
 canvas size Chromium can encode.
 
 **3D preview** - `src/renderer/src/preview3d/` inflates every garment from its
-2D views. A pressure field (Δp = −1 inside, p = 0 on the outline) gives a
-round cross-section whose depth is half the local width, capped per category
-so a tote stays almost flat and a sneaker stays round. The seam sits just
+2D views. Each garment part is inflated on its own, so two trouser legs stay
+two legs instead of one membrane across the crotch, and a sleeve is only as
+thick as the sleeve. A pressure field (Δp = −1 inside, p = 0 on the outline)
+gives a round cross-section whose depth is half the local width, capped per
+category so a tote stays almost flat and a sneaker stays round. The seam sits just
 inside the drawn outline so the texture's dark stroke is not stretched along
 the edge. The front view is mapped onto the +z surface, the back view
 (mirrored, because it is drawn as seen from behind) onto −z; where the two
