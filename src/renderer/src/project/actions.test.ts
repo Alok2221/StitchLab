@@ -1,17 +1,45 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { createDocument } from '../document/model'
-import { getTemplate } from '../templates'
+import { CLIP_GARMENT, createDocument, type TextLayer } from '../document/model'
+import { getGarment } from '../templates'
 import { adoptDocument, fileStem } from './actions'
 
+const text = (id: string, view: string): TextLayer => ({
+  id,
+  type: 'text',
+  name: id,
+  view,
+  x: 0,
+  y: 0,
+  rotation: 0,
+  scale: 1,
+  opacity: 1,
+  visible: true,
+  locked: false,
+  clip: CLIP_GARMENT,
+  text: 'Hi',
+  fontFamily: 'Arial',
+  fontSize: 32,
+  fontWeight: 'bold',
+  fill: '#000000'
+})
+
 describe('adoptDocument', () => {
-  it('keeps saved colors and fills in parts missing from the file', () => {
-    const template = getTemplate('hoodie-front')
-    const doc = { ...createDocument(template.id, []), zoneColors: { body: '#c8102e', removed: '#000000' } }
+  it('keeps saved colors and fills in parts of every view missing from the file', () => {
+    const garment = getGarment('hoodie')
+    const doc = { ...createDocument(garment.id, []), zoneColors: { body: '#c8102e', removed: '#000000' } }
     const adopted = adoptDocument(doc)
     expect(adopted.zoneColors.body).toBe('#c8102e')
-    expect(adopted.zoneColors.hood).toBe(template.zones.find((z) => z.id === 'hood')!.defaultColor)
+    expect(adopted.zoneColors.hood).toBe(garment.zones.find((z) => z.id === 'hood')!.defaultColor)
+    expect(Object.keys(adopted.zoneColors).sort()).toEqual(garment.zones.map((z) => z.id).sort())
     expect(adopted.zoneColors).not.toHaveProperty('removed')
+  })
+
+  it('maps older template ids to garments and puts their layers on the first view', () => {
+    const doc = { ...createDocument('sneaker-side', []), layers: [text('a', ''), text('b', 'inner'), text('c', 'top')] }
+    const adopted = adoptDocument(doc)
+    expect(adopted.templateId).toBe('sneaker')
+    expect(adopted.layers.map((l) => l.view)).toEqual(['outer', 'inner', 'outer'])
   })
 
   it('rejects projects that use an unknown template', () => {

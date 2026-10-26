@@ -69,8 +69,8 @@ the single source for every format:
 - **SVG** - written as is; garment parts are `<path>` elements, layers keep their
   transforms and clip paths.
 - **PNG** - the SVG is rasterized by Chromium onto a canvas at the chosen scale.
-- **PDF** - pdf-lib builds an A4 sheet with a 2400 px render of the design and a
-  spec: part colors with HEX values and the layer list. Standard PDF fonts only
+- **PDF** - pdf-lib builds an A4 sheet with a 2400 px render of each exported
+  view and a spec: part colors with HEX values and the layer list. Standard PDF fonts only
   support WinAnsi, so non-Latin text in the spec is transliterated.
 
 **Colorways** - the document keeps a list of colorways (name, part colors and
@@ -85,6 +85,15 @@ canvas rasterizes the same tile into a Pixi texture and applies the same
 transform through the fill matrix, so the editor and the export match. Exporting all colorways renders the same SVG once per colorway: PNG
 and SVG become one file each, the PDF gets an overview page with every
 colorway followed by one spec sheet per colorway.
+
+**Views** - a garment has several views (front and back; outer and inner side
+for footwear). Part colors and patterns are shared by part id, so a sleeve keeps
+its color on both sides; every layer belongs to one view (`layer.view`). The
+active view is UI state, not part of the undo history, but undo and redo switch
+to the view they change. Changing the garment moves layers onto the new
+garment's views by position (second view to second view), and undo restores
+them. Each view exports as its own SVG / PNG (`<garment>-<view>-<colorway>`);
+the PDF shows the views side by side and groups the layer list by view.
 
 The renderer never touches the file system; it sends the bytes to the main
 process, which shows the dialog, validates the request and writes the files.
@@ -106,8 +115,10 @@ versions/         named snapshots (planned)
 palette and layers; image layers and image patterns reference
 `assets/<hash>.<ext>` instead of embedding data. Loading validates every field,
 rejects files from newer format versions and fills in parts added to a template
-after the file was saved. Format version 2 added colorways and version 3 part
-patterns; older files open with a single colorway and no patterns.
+after the file was saved. Format version 2 added colorways, version 3 part
+patterns and version 4 the view of each layer; older files open with a single
+colorway, no patterns and all layers on the first view. Template ids from
+before views (`tshirt-front`, `sneaker-side`, ...) map to the garment ids.
 
 The main process only writes project files to paths the user picked in a
 dialog during the session, and saves through a temporary file and a rename.
@@ -141,16 +152,21 @@ docs/
 
 A template is an SVG file with:
 
-- `data-template-id`, `data-name` and `data-category` (`tops`, `bottoms`,
+- `data-template-id` (the garment id, shared by all its views), `data-view`,
+  `data-view-label`, `data-name` and `data-category` (`tops`, `bottoms`,
   `dresses`, `bags`, `footwear`) on the root `<svg>`,
 - one `<path id="zone-<name>" data-label="..." fill="...">` per colorable part;
   `fill` is the default color, document order is drawing order,
 - an optional `<rect id="print-area" fill="none">` marking the printable area.
 
-New templates are registered in `src/renderer/src/templates/index.ts`. The
-template tests check every registered file: unique ids, labeled zones, hex
-colors, drawable paths and a print area inside the viewBox. Footwear templates
-use a side view.
+Views of one garment share the viewBox. In back views the left and right parts
+keep their ids but sit on the opposite side of the image. New templates are
+registered as garments in `src/renderer/src/templates/index.ts`; a view can
+also be derived from another one (`deriveView`), optionally mirrored left to
+right - the tote bag back repeats the front, and footwear inner sides mirror
+the outer side. The template tests check every view: unique ids, labeled
+zones, hex colors, drawable paths inside the viewBox, a print area inside the
+viewBox, and left / right parts swapping sides between front and back.
 
 PixiJS runs with `pixi.js/unsafe-eval` so the renderer keeps a strict
 Content Security Policy without `'unsafe-eval'`.

@@ -9,13 +9,13 @@ const empty: History = { past: [], future: [] }
 
 describe('document model', () => {
   it('creates a document with template default colors', () => {
-    const doc = createDocument('tshirt-front', zones)
+    const doc = createDocument('tshirt', zones)
     expect(doc.zoneColors).toEqual({ body: '#ffffff', collar: '#cccccc' })
     expect(doc.palette.length).toBeGreaterThan(0)
   })
 
   it('undoes and redoes a zone color change', () => {
-    const start = createDocument('tshirt-front', zones)
+    const start = createDocument('tshirt', zones)
     const changed = commit(start, empty, { type: 'setZoneColor', zoneId: 'body', from: '#ffffff', to: '#c8102e' })
     expect(changed.doc.zoneColors.body).toBe('#c8102e')
 
@@ -30,7 +30,7 @@ describe('document model', () => {
 
   it('sets, adjusts and removes a part pattern with merged slider edits', () => {
     const stripes: ZonePattern = { kind: 'stripes', color: '#000000', scale: 1, angle: 0 }
-    let s = commit(createDocument('tshirt-front', zones), empty, { type: 'setZonePattern', zoneId: 'body', from: null, to: stripes })
+    let s = commit(createDocument('tshirt', zones), empty, { type: 'setZonePattern', zoneId: 'body', from: null, to: stripes })
     for (const scale of [1.2, 1.5, 2]) {
       const from = s.doc.zonePatterns.body
       s = commit(s.doc, s.history, { type: 'setZonePattern', zoneId: 'body', from, to: { ...stripes, scale }, mergeKey: 'pattern:body:scale' })
@@ -45,7 +45,7 @@ describe('document model', () => {
   })
 
   it('clears the redo stack on a new operation', () => {
-    const start = createDocument('tshirt-front', zones)
+    const start = createDocument('tshirt', zones)
     const a = commit(start, empty, { type: 'setZoneColor', zoneId: 'body', from: '#ffffff', to: '#000000' })
     const u = undo(a.doc, a.history)
     const b = commit(u.doc, u.history, { type: 'addPaletteColor', color: '#123456' })
@@ -54,7 +54,7 @@ describe('document model', () => {
   })
 
   it('caps the history length', () => {
-    let state = { doc: createDocument('tshirt-front', zones), history: empty }
+    let state = { doc: createDocument('tshirt', zones), history: empty }
     for (let i = 0; i < HISTORY_LIMIT + 10; i++) {
       state = commit(state.doc, state.history, { type: 'addPaletteColor', color: '#000000' })
     }
@@ -62,24 +62,24 @@ describe('document model', () => {
   })
 
   it('switches template and restores the previous garment on undo', () => {
-    const start = createDocument('tshirt-front', zones)
+    const start = createDocument('tshirt', zones)
     const recolored = commit(start, empty, { type: 'setZoneColor', zoneId: 'body', from: '#ffffff', to: '#c8102e' })
     const switched = commit(recolored.doc, recolored.history, {
       type: 'setTemplate',
-      from: { templateId: 'tshirt-front', ...initialColorways(recolored.doc.zoneColors) },
-      to: { templateId: 'sneaker-side', ...initialColorways({ upper: '#f4f4f2', sole: '#3b3f4a' }) }
+      from: { templateId: 'tshirt', layerViews: {}, ...initialColorways(recolored.doc.zoneColors) },
+      to: { templateId: 'sneaker', layerViews: {}, ...initialColorways({ upper: '#f4f4f2', sole: '#3b3f4a' }) }
     })
-    expect(switched.doc.templateId).toBe('sneaker-side')
+    expect(switched.doc.templateId).toBe('sneaker')
     expect(switched.doc.zoneColors).toEqual({ upper: '#f4f4f2', sole: '#3b3f4a' })
     expect(switched.doc.palette).toEqual(start.palette)
 
     const undone = undo(switched.doc, switched.history)
-    expect(undone.doc.templateId).toBe('tshirt-front')
+    expect(undone.doc.templateId).toBe('tshirt')
     expect(undone.doc.zoneColors.body).toBe('#c8102e')
   })
 
   it('does nothing when there is nothing to undo or redo', () => {
-    const doc = createDocument('tshirt-front', zones)
+    const doc = createDocument('tshirt', zones)
     expect(undo(doc, empty).doc).toBe(doc)
     expect(redo(doc, empty).doc).toBe(doc)
   })

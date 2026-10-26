@@ -7,6 +7,8 @@ const template: GarmentTemplate = {
   id: 'test-shirt',
   name: 'Test shirt',
   category: 'tops',
+  view: 'front',
+  viewLabel: 'Front',
   viewBox: { x: 0, y: 0, width: 200, height: 300 },
   zones: [
     { id: 'body', label: 'Body', path: 'M0 0 L200 0 L200 300 L0 300 Z', defaultColor: '#ffffff' },
@@ -16,6 +18,7 @@ const template: GarmentTemplate = {
 }
 
 const base = {
+  view: 'front',
   rotation: 0,
   scale: 1,
   opacity: 1,
@@ -90,6 +93,13 @@ describe('documentToSvg', () => {
   it('skips hidden layers', () => {
     const svg = documentToSvg(doc([{ ...text, visible: false }]), template)
     expect(svg).not.toContain('<text')
+  })
+
+  it('draws only the layers of its view', () => {
+    const svg = documentToSvg(doc([text, { ...image, view: 'back' }]), template)
+    expect(svg).toContain('<text')
+    expect(svg).not.toContain('data:image/png')
+    expect(svg).toContain('<title>Test shirt (Front) - StitchLab</title>')
   })
 
   it('splits multi-line text into centered lines', () => {

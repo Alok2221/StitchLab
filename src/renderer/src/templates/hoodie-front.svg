@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 680" data-template-id="hoodie-front" data-name="Hoodie" data-category="tops">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 680" data-template-id="hoodie" data-view="front" data-view-label="Front" data-name="Hoodie" data-category="tops">
   <path id="zone-sleeve-left" data-label="Left sleeve" fill="#3b3f4a"
     d="M170 140 Q118 152 102 230 L62 560 L132 572 L172 330 Z" />
   <path id="zone-sleeve-right" data-label="Right sleeve" fill="#3b3f4a"

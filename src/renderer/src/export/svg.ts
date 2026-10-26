@@ -57,15 +57,15 @@ export interface SvgExportOptions {
   background?: string | null
 }
 
-/** Self-contained SVG of the design: garment parts, then visible layers in stacking order. */
+/** Self-contained SVG of one garment view: its parts, then its visible layers in stacking order. */
 export function documentToSvg(doc: DesignDocument, template: GarmentTemplate, options: SvgExportOptions = {}): string {
   const { x, y, width, height } = template.viewBox
-  const layers = doc.layers.filter((l) => l.visible)
+  const layers = doc.layers.filter((l) => l.visible && l.view === template.view)
   const clips = [...new Set(layers.map((l) => l.clip).filter((c) => c !== CLIP_NONE))]
 
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" width="${width}" height="${height}">`,
-    `<title>${escapeXml(template.name)} - StitchLab</title>`
+    `<title>${escapeXml(template.name)} (${escapeXml(template.viewLabel)}) - StitchLab</title>`
   ]
   const fills = template.zones.map((zone, i) => {
     const color = doc.zoneColors[zone.id] ?? zone.defaultColor

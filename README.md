@@ -5,15 +5,17 @@ parts, add text, graphics and patterns, and export a production-ready design.
 2D editor first, 3D mannequin preview later.
 
 **Status:** early MVP - template library (T-shirt, hoodie, trousers, dress,
-tote bag, sneaker, Chelsea boot, slide sandal), per-part coloring, palette,
+tote bag, sneaker, Chelsea boot, slide sandal) with front and back views (outer
+and inner side for footwear), each with its own layers, per-part coloring, palette,
 part patterns (stripes, checks, dots, grid or your own image, with size and
 angle),
 text and image layers with move / scale / rotate and clipping to the garment
 or a single part, undo / redo, pan and zoom, and export to PNG (1x-8x,
 transparent or white background), SVG (editable vector) and PDF (A4 sheet with
 the design, part colors and a layer list). Colorways keep several color sets of
-one design side by side and export all at once: one PNG or SVG per colorway, or
-a single PDF with an overview page and a spec sheet per colorway. Projects are
+one design side by side. Export can include every view and every colorway at
+once: one PNG or SVG per view and colorway, or a single PDF with an overview
+page and a spec sheet per colorway showing all views. Projects are
 saved as `.stitch` files,
 and unsaved work is autosaved to a recovery file that is offered on the next
 start after a crash.

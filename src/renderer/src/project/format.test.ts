@@ -14,7 +14,7 @@ import { parseProject, ProjectFormatError, serializeProject } from './format'
 const PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
-const base = { rotation: 0.5, scale: 0.75, opacity: 0.9, visible: true, locked: false, clip: CLIP_GARMENT }
+const base = { view: 'front', rotation: 0.5, scale: 0.75, opacity: 0.9, visible: true, locked: false, clip: CLIP_GARMENT }
 
 const text: TextLayer = {
   ...base,
@@ -43,7 +43,7 @@ const image = (id: string): ImageLayer => ({
 })
 
 function sampleDoc(): DesignDocument {
-  const doc = createDocument('hoodie-front', [
+  const doc = createDocument('hoodie', [
     { id: 'body', defaultColor: '#3b3f4a' },
     { id: 'hood', defaultColor: '#3b3f4a' }
   ])
@@ -54,7 +54,7 @@ function sampleDoc(): DesignDocument {
     zoneColors: { ...doc.zoneColors, body: '#c8102e' },
     zonePatterns: { body: { kind: 'stripes', color: '#ffffff', scale: 1.5, angle: 45 } },
     colorways: [...doc.colorways, { id: 'navy', name: 'Navy', zoneColors: navy, zonePatterns: { hood: logoPattern } }],
-    layers: [text, image('i1'), image('i2')]
+    layers: [text, image('i1'), { ...image('i2'), view: 'back' }]
   }
 }
 
@@ -75,6 +75,21 @@ describe('project file format', () => {
     expect(loaded.doc.colorways[1].name).toBe('Navy')
     expect(loaded.doc.colorways[0].zonePatterns.body.kind).toBe('stripes')
     expect(loaded.doc.colorways[1].zonePatterns.hood).toMatchObject({ kind: 'image', src: PNG_DATA_URL })
+  })
+
+  it('opens version 3 files without layer views', async () => {
+    const data = rezip(await serializeProject(sampleDoc()), (json) => {
+      json.version = 3
+      for (const layer of (json.document as { layers: Record<string, unknown>[] }).layers) delete layer.view
+    })
+    expect(parseProject(data).doc.layers.map((l) => l.view)).toEqual(['', '', ''])
+  })
+
+  it('requires layer views from version 4', async () => {
+    const data = rezip(await serializeProject(sampleDoc()), (json) => {
+      delete (json.document as { layers: Record<string, unknown>[] }).layers[0].view
+    })
+    expect(() => parseProject(data)).toThrow('layer 1 has an invalid view')
   })
 
   it('opens version 2 files without patterns', async () => {
@@ -144,7 +159,7 @@ describe('project file format', () => {
 
     const json = JSON.parse(strFromU8(files['project.json']))
     expect(json.format).toBe('stitchlab-project')
-    expect(json.version).toBe(3)
+    expect(json.version).toBe(4)
     expect(JSON.stringify(json)).not.toContain('data:image')
   })
 

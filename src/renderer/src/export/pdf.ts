@@ -51,38 +51,48 @@ function describeLayer(layer: Layer, template: GarmentTemplate): string {
   return `${layer.name} - ${details}; ${transform}`
 }
 
-/** One rendered colorway. */
-export interface PdfSheet {
-  /** Colorway name; omitted when the design has a single colorway. */
-  name: string | null
-  zoneColors: Record<string, string>
-  zonePatterns: Record<string, ZonePattern>
+export interface PdfRender {
   png: Uint8Array
   pngWidth: number
   pngHeight: number
 }
 
+/** One colorway, rendered once per exported view. */
+export interface PdfSheet {
+  /** Colorway name; omitted when the design has a single colorway. */
+  name: string | null
+  zoneColors: Record<string, string>
+  zonePatterns: Record<string, ZonePattern>
+  /** In the same order as `PdfInput.views`. */
+  renders: PdfRender[]
+}
+
 export interface PdfInput {
   doc: DesignDocument
-  template: GarmentTemplate
+  /** Views of one garment included in the export. */
+  views: GarmentTemplate[]
   sheets: PdfSheet[]
   createdAt?: Date
 }
 
 /**
- * A4 spec sheets: one page (or more) per colorway with the render, part colors
- * and layers. Several colorways get an overview page first.
+ * A4 spec sheets: one page (or more) per colorway with the views side by side,
+ * part colors and layers grouped by view. Several colorways get an overview page first.
  */
-export async function buildPdf({ doc, template, sheets, createdAt = new Date() }: PdfInput) {
-  if (sheets.length === 0) throw new Error('Nothing to export')
+export async function buildPdf({ doc, views, sheets, createdAt = new Date() }: PdfInput) {
+  if (sheets.length === 0 || views.length === 0) throw new Error('Nothing to export')
+  if (sheets.some((s) => s.renders.length !== views.length)) throw new Error('Every colorway needs a render per view')
+  const { name } = views[0]
+  const zones = [...new Map(views.flatMap((v) => v.zones).map((z) => [z.id, z])).values()]
+  const showViewLabels = views.length > 1
   const pdf = await PDFDocument.create()
-  pdf.setTitle(`${template.name} - StitchLab`)
+  pdf.setTitle(`${name} - StitchLab`)
   pdf.setCreator('StitchLab')
   pdf.setCreationDate(createdAt)
 
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
-  const images = await Promise.all(sheets.map((s) => pdf.embedPng(s.png)))
+  const images = await Promise.all(sheets.map((s) => Promise.all(s.renders.map((r) => pdf.embedPng(r.png)))))
   const contentWidth = PAGE_WIDTH - MARGIN * 2
   const exported = `Exported ${createdAt.toISOString().slice(0, 10)}`
 
@@ -109,13 +119,33 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
     write(exported, MARGIN, 10, regular, MUTED_COLOR)
     y -= 16
   }
-  const drawFitted = (index: number, x: number, top: number, width: number, height: number) => {
-    const { pngWidth, pngHeight } = sheets[index]
-    const fit = Math.min(width / pngWidth, height / pngHeight)
-    const w = pngWidth * fit
-    const h = pngHeight * fit
-    page.drawImage(images[index], { x: x + (width - w) / 2, y: top - h, width: w, height: h })
-    return h
+  /** Draws every view of a colorway side by side; returns the height used. */
+  const drawViews = (index: number, x: number, top: number, width: number, height: number) => {
+    const gap = 12
+    const labelHeight = showViewLabels ? 14 : 0
+    const cellWidth = (width - gap * (views.length - 1)) / views.length
+    const fit = Math.min(
+      ...sheets[index].renders.map((r) => Math.min(cellWidth / r.pngWidth, (height - labelHeight) / r.pngHeight))
+    )
+    let used = 0
+    sheets[index].renders.forEach((render, v) => {
+      const w = render.pngWidth * fit
+      const h = render.pngHeight * fit
+      const cellX = x + v * (cellWidth + gap)
+      page.drawImage(images[index][v], { x: cellX + (cellWidth - w) / 2, y: top - h, width: w, height: h })
+      used = Math.max(used, h)
+    })
+    if (showViewLabels) {
+      const saved = y
+      y = top - used - 11
+      views.forEach((view, v) => {
+        const label = toWinAnsi(view.viewLabel)
+        const labelX = x + v * (cellWidth + gap) + (cellWidth - regular.widthOfTextAtSize(label, 9)) / 2
+        write(label, labelX, 9, regular, MUTED_COLOR, cellWidth)
+      })
+      y = saved
+    }
+    return used + labelHeight
   }
 
   if (sheets.length > 1) {
@@ -125,7 +155,7 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
     const imageHeight = columns === 2 ? 300 : 190
     const cellHeight = imageHeight + 34
     newPage()
-    heading(`${template.name} - ${sheets.length} colorways`)
+    heading(`${name} - ${sheets.length} colorways`)
     sheets.forEach((sheet, i) => {
       const column = i % columns
       if (column === 0) {
@@ -134,7 +164,7 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
       }
       const x = MARGIN + column * (cellWidth + gap)
       const top = y - 6
-      drawFitted(i, x, top, cellWidth, imageHeight)
+      drawViews(i, x, top, cellWidth, imageHeight)
       page.drawRectangle({ x, y: top - imageHeight - 4, width: cellWidth, height: imageHeight + 8, borderColor: BORDER_COLOR, borderWidth: 0.5 })
       const saved = y
       y = top - imageHeight - 20
@@ -145,14 +175,14 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
 
   sheets.forEach((sheet, index) => {
     newPage()
-    heading(sheet.name ? `${template.name} - ${sheet.name}` : `${template.name} - StitchLab design`)
-    y -= drawFitted(index, MARGIN, y, contentWidth, IMAGE_MAX_HEIGHT)
+    heading(sheet.name ? `${name} - ${sheet.name}` : `${name} - StitchLab design`)
+    y -= drawViews(index, MARGIN, y, contentWidth, IMAGE_MAX_HEIGHT)
     y -= 28
 
     write('Part colors', MARGIN, 13, bold)
     y -= ROW_HEIGHT + 2
     const columnWidth = contentWidth / 2
-    template.zones.forEach((zone, i) => {
+    zones.forEach((zone, i) => {
       const column = i % 2
       if (column === 0) ensureSpace(ROW_HEIGHT)
       const x = MARGIN + column * columnWidth
@@ -168,10 +198,10 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
       })
       write(zone.label, x + SWATCH + 8, 10, regular, TEXT_COLOR, columnWidth - 110)
       write(color.toUpperCase(), x + columnWidth - 80, 10, regular, MUTED_COLOR)
-      if (column === 1 || i === template.zones.length - 1) y -= ROW_HEIGHT
+      if (column === 1 || i === zones.length - 1) y -= ROW_HEIGHT
     })
 
-    const patterned = template.zones.filter((zone) => sheet.zonePatterns[zone.id])
+    const patterned = zones.filter((zone) => sheet.zonePatterns[zone.id])
     if (patterned.length > 0) {
       y -= 14
       ensureSpace(ROW_HEIGHT * 2)
@@ -188,14 +218,23 @@ export async function buildPdf({ doc, template, sheets, createdAt = new Date() }
     ensureSpace(ROW_HEIGHT * 2)
     write('Layers', MARGIN, 13, bold)
     y -= ROW_HEIGHT + 2
-    if (doc.layers.length === 0) {
+    const groups = views.map((view) => ({ view, layers: doc.layers.filter((l) => l.view === view.view).reverse() }))
+    if (groups.every((g) => g.layers.length === 0)) {
       write('No layers - garment colors only.', MARGIN, 10, regular, MUTED_COLOR)
     }
-    ;[...doc.layers].reverse().forEach((layer, i) => {
-      ensureSpace(ROW_HEIGHT)
-      write(`${i + 1}. ${describeLayer(layer, template)}`, MARGIN, 10, regular, TEXT_COLOR, contentWidth)
-      y -= ROW_HEIGHT
-    })
+    for (const { view, layers } of groups) {
+      if (layers.length === 0) continue
+      if (showViewLabels) {
+        ensureSpace(ROW_HEIGHT * 2)
+        write(view.viewLabel, MARGIN, 11, bold)
+        y -= ROW_HEIGHT
+      }
+      layers.forEach((layer, i) => {
+        ensureSpace(ROW_HEIGHT)
+        write(`${i + 1}. ${describeLayer(layer, view)}`, MARGIN, 10, regular, TEXT_COLOR, contentWidth)
+        y -= ROW_HEIGHT
+      })
+    }
   })
 
   return pdf.save()

@@ -8,6 +8,8 @@ export type ClipMode = string
 interface LayerBase {
   id: string
   name: string
+  /** Garment view the layer is printed on (`front`, `back`, `outer` ...). */
+  view: string
   x: number
   y: number
   rotation: number
@@ -91,6 +93,31 @@ export interface ColorwayState extends ZoneFills {
 
 export interface GarmentState extends ColorwayState {
   templateId: string
+  /** View of every layer, by layer id. */
+  layerViews: Record<string, string>
+}
+
+export function layerViews(layers: Layer[]): Record<string, string> {
+  return Object.fromEntries(layers.map((l) => [l.id, l.view]))
+}
+
+/**
+ * Moves layers onto the views of another garment: a view both garments have stays,
+ * otherwise a layer keeps the position of its view (second view to second view),
+ * falling back to the first view.
+ */
+export function remapLayerViews(layers: Layer[], fromViews: string[], toViews: string[]): Record<string, string> {
+  return Object.fromEntries(
+    layers.map((l) => {
+      if (toViews.includes(l.view)) return [l.id, l.view]
+      const index = fromViews.indexOf(l.view)
+      return [l.id, toViews[index] ?? toViews[0]]
+    })
+  )
+}
+
+function withLayerViews(layers: Layer[], views: Record<string, string>): Layer[] {
+  return layers.map((l) => (views[l.id] && views[l.id] !== l.view ? { ...l, view: views[l.id] } : l))
 }
 
 export type Operation =
@@ -218,7 +245,10 @@ export function applyOperation(doc: DesignDocument, op: Operation): DesignDocume
       return { ...doc, zonePatterns: withPattern(doc.zonePatterns, op.zoneId, op.to) }
     case 'addPaletteColor':
       return { ...doc, palette: [...doc.palette, op.color] }
-    case 'setTemplate':
+    case 'setTemplate': {
+      const { layerViews: views, ...garment } = op.to
+      return { ...doc, ...garment, layers: withLayerViews(doc.layers, views) }
+    }
     case 'setColorways':
       return { ...doc, ...op.to }
     case 'addLayer':
@@ -240,7 +270,10 @@ export function revertOperation(doc: DesignDocument, op: Operation): DesignDocum
       return { ...doc, zonePatterns: withPattern(doc.zonePatterns, op.zoneId, op.from) }
     case 'addPaletteColor':
       return { ...doc, palette: doc.palette.slice(0, -1) }
-    case 'setTemplate':
+    case 'setTemplate': {
+      const { layerViews: views, ...garment } = op.from
+      return { ...doc, ...garment, layers: withLayerViews(doc.layers, views) }
+    }
     case 'setColorways':
       return { ...doc, ...op.from }
     case 'addLayer':
