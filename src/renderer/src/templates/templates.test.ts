@@ -65,6 +65,8 @@ describe('garment templates', () => {
 
   it('falls back to the first view for an unknown view', () => {
     expect(getTemplate('sneaker', 'inner').view).toBe('inner')
+    expect(getTemplate('sneaker', 'inner').mirrorOf).toBe('outer')
+    expect(getTemplate('tote-bag', 'back').mirrorOf).toBeUndefined()
     expect(getTemplate('sneaker', 'back').view).toBe('outer')
     expect(getTemplate('sneaker').view).toBe('outer')
   })

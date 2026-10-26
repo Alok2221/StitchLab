@@ -512,8 +512,24 @@ button.primary:hover:not(:disabled) {
 
 .layer-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+
+.layer-view-actions {
+  display: flex;
+}
+
+.layer-view-actions button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.layer-view-actions button:last-child {
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 button.danger {
