@@ -739,6 +739,13 @@ button.danger {
   pointer-events: none;
 }
 
+.preview3d-lighting {
+  left: auto;
+  right: 12px;
+  top: 12px;
+  bottom: auto;
+}
+
 .preview3d-export {
   position: absolute;
   right: 12px;

@@ -116,7 +116,7 @@ the edge. The front view is mapped onto the +z surface, the back view
 (mirrored, because it is drawn as seen from behind) onto −z; where the two
 outlines differ, such as a hood, the other view is used as an underlay. The
 preview sits in the same canvas as the 2D editor, with orbit, zoom, studio
-lighting and cameras for the front, the back, the side and a three-quarter
+lighting (studio, soft, outdoor) and cameras for the front, the back, the side and a three-quarter
 view. Three.js is loaded only when the 3D mode is first opened. Save PNG
 renders the same camera off-screen at 1024, 2048 or 4096 px on the long
 side and writes it through the existing file dialog; a transparent

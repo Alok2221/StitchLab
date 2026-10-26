@@ -4,6 +4,7 @@ import { notify } from '../project/notice'
 import { getGarment } from '../templates'
 import { garmentMesh, viewTexture, withMirroredUnderlay } from './garmentModel'
 import type { InflatedMesh } from './inflate'
+import { LIGHTING_LABELS, type LightingPreset } from './lighting'
 import { DEFAULT_SNAPSHOT_SIDE, SNAPSHOT_SIDES, snapshotFileStem } from './snapshot'
 import { createViewer, type CameraPreset, type Viewer } from './viewer'
 
@@ -27,6 +28,7 @@ export function Preview3D() {
   const viewerRef = useRef<Viewer | null>(null)
   const garment = useEditor((s) => getGarment(s.doc.templateId))
   const [preset, setPreset] = useState<CameraPreset | null>('front')
+  const [lighting, setLighting] = useState<LightingPreset>('studio')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [longSide, setLongSide] = useState(DEFAULT_SNAPSHOT_SIDE)
@@ -89,6 +91,11 @@ export function Preview3D() {
     viewerRef.current?.setPreset(next)
   }
 
+  const chooseLighting = (next: LightingPreset) => {
+    setLighting(next)
+    viewerRef.current?.setLighting(next)
+  }
+
   const savePng = async () => {
     const viewer = viewerRef.current
     const api = window.stitchlab
@@ -116,6 +123,13 @@ export function Preview3D() {
     <div className="preview3d">
       <div className="preview3d-stage" ref={stageRef} title="Drag to orbit, scroll to zoom" />
       {(loading || error) && <div className="preview3d-status">{error ? `3D preview failed: ${error}` : 'Building 3D preview…'}</div>}
+      <div className="view-tabs preview3d-lighting" role="toolbar" aria-label="Lighting">
+        {(Object.keys(LIGHTING_LABELS) as LightingPreset[]).map((id) => (
+          <button key={id} className={id === lighting ? 'selected' : ''} onClick={() => chooseLighting(id)}>
+            {LIGHTING_LABELS[id]}
+          </button>
+        ))}
+      </div>
       <div className="view-tabs" role="toolbar" aria-label="Camera">
         {presets.map((p) => (
           <button key={p.id} className={p.id === preset ? 'selected' : ''} onClick={() => choose(p.id)}>

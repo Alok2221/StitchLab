@@ -18,9 +18,9 @@ one design side by side. Export can include every view and every colorway at
 once: one PNG or SVG per view and colorway, a single lookbook sheet with the
 views side by side and a row per colorway (also shown by Preview), or a single
 PDF with an overview page and a spec sheet per colorway showing all views.
-The canvas switches to a 3D preview of the garment, with orbit, zoom and
-preset cameras; the design is applied as a texture and updates after each
-edit. A PNG of the current camera can be saved from the 3D view (1024, 2048
+The canvas switches to a 3D preview of the garment, with orbit, zoom,
+preset cameras and lighting (studio, soft, outdoor); the design is applied
+as a texture and updates after each edit. A PNG of the current camera can be saved from the 3D view (1024, 2048
 or 4096 px on the long side, studio or transparent background).
 Projects are
 saved as `.stitch` files,

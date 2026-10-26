@@ -22,6 +22,7 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import type { InflatedMesh } from './inflate'
+import { LIGHTING_PRESETS, type Lighting, type LightingPreset } from './lighting'
 import { pngFromDataUrl, snapshotSize } from './snapshot'
 
 export type CameraPreset = 'front' | 'back' | 'side' | 'three-quarter'
@@ -35,12 +36,12 @@ export interface Viewer {
   setMesh: (mesh: InflatedMesh) => void
   setTextures: (front: HTMLCanvasElement, back: HTMLCanvasElement) => void
   setPreset: (preset: CameraPreset) => void
+  setLighting: (preset: LightingPreset) => void
   /** PNG of the current camera, rendered at `longSide` on the longer edge. */
   capturePng: (options: SnapshotOptions) => Uint8Array
   dispose: () => void
 }
 
-const BACKGROUND = '#2a2b31'
 const FOV = 35
 /** Size of the garment's long side in scene units. */
 const MODEL_SIZE = 2
@@ -58,6 +59,12 @@ function garmentMaterial() {
   return new MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0, side: DoubleSide })
 }
 
+function applyLight(light: DirectionalLight, spec: Lighting['key'] | Lighting['fill']) {
+  light.color.setHex(spec.color)
+  light.intensity = spec.intensity
+  light.position.set(...spec.position)
+}
+
 /** Three.js scene with the garment, studio lighting and an orbit camera, drawn into `host`. */
 export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => void } = {}): Viewer {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true })
@@ -69,7 +76,6 @@ export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => v
   host.appendChild(renderer.domElement)
 
   const scene = new Scene()
-  scene.background = new Color(BACKGROUND)
   const camera = new PerspectiveCamera(FOV, 1, 0.01, 100)
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
@@ -77,25 +83,36 @@ export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => v
   controls.minDistance = 1
   controls.maxDistance = 10
 
-  scene.add(new HemisphereLight(0xffffff, 0x3a3b44, 1.1))
-  const key = new DirectionalLight(0xffffff, 2.2)
-  key.position.set(2.5, 4, 4)
+  const hemi = new HemisphereLight()
+  const key = new DirectionalLight()
   key.castShadow = true
   key.shadow.mapSize.set(2048, 2048)
   key.shadow.camera.left = key.shadow.camera.bottom = -2
   key.shadow.camera.right = key.shadow.camera.top = 2
   key.shadow.normalBias = 0.02
   key.shadow.radius = 6
-  const fill = new DirectionalLight(0xdfe6ff, 0.8)
-  fill.position.set(-4, 1.5, 2.5)
-  const rim = new DirectionalLight(0xffffff, 1.4)
-  rim.position.set(0, 2.5, -4.5)
-  scene.add(key, fill, rim)
+  const fill = new DirectionalLight()
+  const rim = new DirectionalLight()
+  scene.add(hemi, key, fill, rim)
 
   const floor = new Mesh(new CircleGeometry(3, 64), new ShadowMaterial({ opacity: 0.28 }))
   floor.rotation.x = -Math.PI / 2
   floor.receiveShadow = true
   scene.add(floor)
+
+  const applyLighting = (preset: LightingPreset) => {
+    const lighting = LIGHTING_PRESETS[preset]
+    scene.background = new Color(lighting.background)
+    hemi.color.setHex(lighting.hemi.sky)
+    hemi.groundColor.setHex(lighting.hemi.ground)
+    hemi.intensity = lighting.hemi.intensity
+    applyLight(key, lighting.key)
+    key.castShadow = lighting.key.shadow
+    applyLight(fill, lighting.fill)
+    applyLight(rim, lighting.rim)
+    floor.material.opacity = lighting.floorOpacity
+  }
+  applyLighting('studio')
 
   const materials = [garmentMaterial(), garmentMaterial()]
   const garment = new Mesh(new BufferGeometry(), materials)
@@ -229,6 +246,10 @@ export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => v
         camera.aspect = clientWidth / Math.max(1, clientHeight)
         camera.updateProjectionMatrix()
       }
+    },
+
+    setLighting(next) {
+      applyLighting(next)
     },
 
     setPreset(next) {
