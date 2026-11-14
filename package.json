@@ -11,6 +11,7 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
+    "templates:project": "node scripts/projectTemplates.mjs",
     "dist:win": "electron-vite build && electron-builder --win --publish never"
   },
   "dependencies": {

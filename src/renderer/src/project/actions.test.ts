@@ -30,7 +30,8 @@ describe('adoptDocument', () => {
     const doc = { ...createDocument(garment.id, []), zoneColors: { body: '#c8102e', removed: '#000000' } }
     const adopted = adoptDocument(doc)
     expect(adopted.zoneColors.body).toBe('#c8102e')
-    expect(adopted.zoneColors.hood).toBe(garment.zones.find((z) => z.id === 'hood')!.defaultColor)
+    const filled = garment.zones.find((z) => z.id !== 'body')!
+    expect(adopted.zoneColors[filled.id]).toBe(filled.defaultColor)
     expect(Object.keys(adopted.zoneColors).sort()).toEqual(garment.zones.map((z) => z.id).sort())
     expect(adopted.zoneColors).not.toHaveProperty('removed')
   })

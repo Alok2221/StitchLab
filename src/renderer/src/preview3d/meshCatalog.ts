@@ -8,32 +8,34 @@ import trousersUrl from './meshes/trousers.glb?url'
 import tshirtUrl from './meshes/tshirt.glb?url'
 
 /**
- * How to turn a downloaded GLB into a preview shell: which materials are cloth
- * (hangers and hooks are dropped), and how to face the mesh toward the camera.
+ * How to turn a GLB into a preview shell: optional material filter, and how to
+ * face the mesh toward the camera before planar UVs are built.
  */
 export interface GarmentMeshSpec {
   /** Vite URL of the `.glb` file. */
   url: string
   /**
-   * Material names to keep. When omitted, every mesh is kept.
-   * Hung garments include a hanger; only the fabric materials are listed.
+   * Material names to keep. When omitted, every mesh in the file is used.
    */
   keepMaterials?: string[]
   /**
    * Extra rotation in radians applied after world transforms, before UVs.
-   * `yaw` turns around Y (side profile for footwear), `roll` around Z
-   * (trousers hung from the hem are flipped so the waist sits up).
+   * `yaw` turns around Y (side profile for footwear).
    */
   yaw?: number
   roll?: number
 }
 
-/** One CC0 mesh per garment id; footwear side views face +Z after `yaw`. */
+/**
+ * One GLB per garment. Apparel faces the camera on +Z (planar XY UVs).
+ * Footwear is yawed so the outer side faces +Z for the side-view templates.
+ */
 export const GARMENT_MESHES: Record<string, GarmentMeshSpec> = {
-  tshirt: { url: tshirtUrl, keepMaterials: ['rust'] },
-  hoodie: { url: hoodieUrl, keepMaterials: ['sage', 'shell'] },
-  trousers: { url: trousersUrl, keepMaterials: ['navy'], roll: Math.PI },
-  dress: { url: dressUrl, keepMaterials: ['rust', 'shell'] },
+  tshirt: { url: tshirtUrl },
+  // Source mesh faces −Z; 180° yaw puts the chest toward the front camera (+Z).
+  hoodie: { url: hoodieUrl, yaw: Math.PI },
+  trousers: { url: trousersUrl },
+  dress: { url: dressUrl },
   'tote-bag': { url: toteUrl },
   sneaker: { url: sneakerUrl, yaw: Math.PI / 2 },
   'chelsea-boot': { url: bootUrl, yaw: Math.PI / 2 },

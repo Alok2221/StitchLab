@@ -13,7 +13,7 @@ import { createViewer, type CameraPreset, type Viewer } from './viewer'
 const UPDATE_DELAY_MS = 120
 
 /** Bumped when the mesh builder changes, so a hot reload does not keep the old shell. */
-const MESH_VERSION = 6
+const MESH_VERSION = 12
 const meshes = new Map<string, Promise<InflatedMesh>>()
 
 function cachedMesh(garmentId: string): Promise<InflatedMesh> {
@@ -48,6 +48,7 @@ export function Preview3D() {
     let disposed = false
     let generation = 0
     let shownGarment: string | null = null
+    let currentMesh: InflatedMesh | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
 
     const update = async () => {
@@ -64,13 +65,15 @@ export function Preview3D() {
         if (disposed || current !== generation) return
         if (mesh) {
           viewer.setMesh(mesh)
+          currentMesh = mesh
           shownGarment = doc.templateId
           setPreset('front')
         }
+        const shell = mesh ?? currentMesh
         const fabric = fabricColorFor(doc, garment)
         viewer.setTextures(
-          fitTextureForMesh(front, back, fabric, withMirroredUnderlay),
-          fitTextureForMesh(back, front, fabric, withMirroredUnderlay)
+          fitTextureForMesh(front, back, fabric, withMirroredUnderlay, shell?.frontSilhouette),
+          fitTextureForMesh(back, front, fabric, withMirroredUnderlay, shell?.backSilhouette)
         )
         setLoading(false)
         setError(null)

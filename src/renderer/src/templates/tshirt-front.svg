@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 640" data-template-id="tshirt" data-view="front" data-view-label="Front" data-name="T-shirt" data-category="tops">
-  <path id="zone-sleeve-left" data-label="Left sleeve" fill="#f4f4f2"
-    d="M168 92 L62 168 Q54 176 60 186 L104 252 Q110 260 120 256 L176 222 Z" />
-  <path id="zone-sleeve-right" data-label="Right sleeve" fill="#f4f4f2"
-    d="M432 92 L538 168 Q546 176 540 186 L496 252 Q490 260 480 256 L424 222 Z" />
-  <path id="zone-body" data-label="Body" fill="#f4f4f2"
-    d="M236 58 Q300 112 364 58 L432 92 L424 222 Q428 410 440 598 Q300 618 160 598 Q172 410 176 222 L168 92 Z" />
-  <path id="zone-collar" data-label="Collar" fill="#d9d9d4"
-    d="M236 58 Q300 112 364 58 L378 66 Q300 132 222 66 Z" />
-  <rect id="print-area" x="220" y="150" width="160" height="210" fill="none" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 518 600" data-template-id="tshirt" data-view="front" data-view-label="Front" data-name="T-shirt" data-category="tops">
+  <path id="zone-body" data-label="Body" fill="#e8e4dc"
+    d="M203.2 17.8 L191 27.2 L131.9 51.6 L131.9 580.3 L169.2 582.2 L216.9 580.3 L382 580.3 L386.1 578.4 L386.1 50.6 L335.1 29.1 L320.5 18.8 L320.5 24.4 L317.3 30 L273.6 34.7 L248.5 34.7 L212.1 30.9 L205.6 28.1 L203.2 23.4 L204 18.8 Z" />
+  <path id="zone-sleeve-left" data-label="Sleeve left" fill="#e8e4dc"
+    d="M131.9 50.6 L107.6 60.9 L93.9 69.4 L76.9 85.3 L66.4 99.4 L53.4 123.8 L43.7 149.1 L14.6 239.1 L27.5 250.3 L42.9 258.8 L76.1 270 L99.6 272.8 L106.8 268.1 L118.2 210 L120.6 210.9 L124.6 220.3 L127.9 236.3 L130.3 374.1 L126.3 463.1 L119.8 510 L115.7 577.5 L125.5 580.3 L132.7 579.4 L132.7 51.6 Z" />
+  <path id="zone-sleeve-right" data-label="Sleeve right" fill="#e8e4dc"
+    d="M386.1 49.7 L385.3 578.4 L396.6 578.4 L407.1 574.7 L393.4 373.1 L393.4 347.8 L400.6 287.8 L396.6 240 L396.6 224.1 L398.2 218.4 L400.6 212.8 L403.1 210 L404.7 210.9 L414.4 264.4 L418.4 270.9 L423.3 272.8 L444.3 271.9 L473.5 264.4 L492.9 255 L502.6 243.8 L489.7 199.7 L476.7 146.3 L470.2 127.5 L459.7 105.9 L442.7 82.5 L425.7 67.5 L410.4 59.1 L386.9 50.6 Z" />
+  <path id="zone-collar" data-label="Collar" fill="#d4cfc4"
+    d="M204.8 16.9 L191.8 26.3 L191.8 28.1 L195.9 27.2 L216.9 32.8 L246.1 35.6 L292.2 34.7 L327.8 28.1 L332.7 29.1 L332.7 27.2 L320.5 18.8 L315.7 17.8 L297.8 20.6 L229.1 20.6 L205.6 16.9 Z" />
+  <rect id="print-area" x="145" y="192" width="228" height="240" fill="none" />
 </svg>

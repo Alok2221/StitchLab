@@ -3,6 +3,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   CircleGeometry,
+  ClampToEdgeWrapping,
   Color,
   DirectionalLight,
   DoubleSide,
@@ -55,14 +56,17 @@ const PRESET_DIRECTIONS: Record<CameraPreset, Vector3> = {
   'three-quarter': new Vector3(0.8, 0.3, 0.9)
 }
 
-function garmentMaterial() {
+function garmentMaterial(polygonOffset = false) {
   return new MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.85,
     metalness: 0,
+    // Opaque: fabric textures are filled solid so alpha sorting does not carve black slits at seams.
     side: DoubleSide,
-    transparent: true,
-    alphaTest: 0.02
+    depthWrite: true,
+    polygonOffset,
+    polygonOffsetFactor: polygonOffset ? 1 : 0,
+    polygonOffsetUnits: polygonOffset ? 1 : 0
   })
 }
 
@@ -121,7 +125,8 @@ export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => v
   }
   applyLighting('studio')
 
-  const materials = [garmentMaterial(), garmentMaterial()]
+  // Back group is polygon-offset so the midZ overlap band does not z-fight.
+  const materials = [garmentMaterial(false), garmentMaterial(true)]
   const garment = new Mesh(new BufferGeometry(), materials)
   garment.castShadow = true
   garment.visible = false
@@ -212,6 +217,8 @@ export function createViewer(host: HTMLElement, { onOrbit }: { onOrbit?: () => v
       ;[front, back].forEach((canvas, i) => {
         const texture = new CanvasTexture(canvas)
         texture.colorSpace = SRGBColorSpace
+        texture.wrapS = ClampToEdgeWrapping
+        texture.wrapT = ClampToEdgeWrapping
         texture.anisotropy = renderer.capabilities.getMaxAnisotropy()
         materials[i].map?.dispose()
         materials[i].map = texture

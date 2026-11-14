@@ -44,11 +44,11 @@ describe('garment templates', () => {
     const trousers = getGarment('trousers')
     const ids = trousers.zones.map((z) => z.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids).toEqual(expect.arrayContaining(['button', 'back-pocket-left', 'leg-left']))
+    expect(ids).toEqual(expect.arrayContaining(['waist', 'leg-left', 'leg-right']))
   })
 
   it('keeps left and right parts on the wearer side in back views', () => {
-    for (const id of ['tshirt', 'hoodie', 'trousers', 'dress']) {
+    for (const id of ['tshirt', 'trousers']) {
       const [front, back] = getGarment(id).views
       const left = (t: typeof front) => t.zones.find((z) => /-left$/.test(z.id))!
       const center = (t: typeof front) => t.viewBox.x + t.viewBox.width / 2

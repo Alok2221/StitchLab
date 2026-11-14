@@ -1,23 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 680" data-template-id="hoodie" data-view="front" data-view-label="Front" data-name="Hoodie" data-category="tops">
-  <path id="zone-sleeve-left" data-label="Left sleeve" fill="#3b3f4a"
-    d="M170 140 Q118 152 102 230 L62 560 L132 572 L172 330 Z" />
-  <path id="zone-sleeve-right" data-label="Right sleeve" fill="#3b3f4a"
-    d="M470 140 Q522 152 538 230 L578 560 L508 572 L468 330 Z" />
-  <path id="zone-cuff-left" data-label="Left cuff" fill="#2c2f37"
-    d="M62 560 L132 572 L128 612 L56 602 Z" />
-  <path id="zone-cuff-right" data-label="Right cuff" fill="#2c2f37"
-    d="M578 560 L508 572 L512 612 L584 602 Z" />
-  <path id="zone-body" data-label="Body" fill="#3b3f4a"
-    d="M226 120 L170 140 Q160 400 168 610 L472 610 Q480 400 470 140 L414 120 Q370 150 320 150 Q270 150 226 120 Z" />
-  <path id="zone-hood" data-label="Hood" fill="#3b3f4a"
-    d="M226 120 Q210 40 320 20 Q430 40 414 120 Q370 150 320 150 Q270 150 226 120 Z" />
-  <path id="zone-hood-lining" data-label="Hood lining" fill="#8a8f9c"
-    d="M262 112 Q262 56 320 50 Q378 56 378 112 Q350 132 320 132 Q290 132 262 112 Z" />
-  <path id="zone-pocket" data-label="Pocket" fill="#353943"
-    d="M232 440 L408 440 L438 580 L202 580 Z" />
-  <path id="zone-waistband" data-label="Waistband" fill="#2c2f37"
-    d="M168 610 L472 610 L470 660 L170 660 Z" />
-  <path id="zone-drawstrings" data-label="Drawstrings" fill="#f4f4f2"
-    d="M294 144 L301 144 L301 256 L294 256 Z M339 144 L346 144 L346 256 L339 256 Z" />
-  <rect id="print-area" x="240" y="190" width="160" height="220" fill="none" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 366" data-template-id="hoodie" data-view="front" data-view-label="Front" data-name="Hoodie" data-category="tops">
+  <path id="zone-body" data-label="Body" fill="#3d5a80"
+    d="M345.9 10.3 L329.1 11.4 L316.9 15.4 L302.8 23.4 L291.6 25.7 L282.2 18.9 L267.2 16 L265.3 16.6 L256.9 28 L240.9 33.2 L240.9 36 L247.5 42.9 L247.5 46.3 L239.1 49.8 L231.6 50.3 L221.3 53.8 L204.4 62.9 L194.1 65.2 L181.9 71.5 L178.1 77.2 L180 82.9 L152.8 115.5 L144.4 130.4 L134.1 140.1 L124.7 153.8 L112.5 157.8 L105 163 L95.6 177.9 L95.6 265.4 L99.4 265.4 L112.5 259.1 L151.9 235.6 L179.1 212.7 L195 196.2 L199.7 195 L201.6 208.2 L202.5 270.5 L207.2 288.8 L207.2 294.5 L199.7 312.8 L199.7 318.5 L209.1 328.3 L209.1 332.8 L213.8 340.3 L219.4 344.8 L257.8 351.1 L300 355.1 L359.1 352.8 L383.4 349.4 L388.1 347.1 L387.2 339.7 L392.8 338.6 L400.3 332.3 L404.1 322.5 L404.1 316.8 L399.4 308.8 L400.3 264.2 L402.2 255.1 L399.4 196.2 L415.3 195 L427.5 214.5 L459.4 244.8 L466.9 249.3 L492.2 257.9 L497.8 263.1 L504.4 265.9 L504.4 176.1 L495 169.3 L474.4 142.4 L438.8 109.2 L426.6 92.1 L417.2 71.5 L367.5 50.3 L350.6 45.8 L352.5 42.9 L351.6 37.2 L355.3 30.3 L355.3 21.2 L353.4 19.4 L354.4 14.3 L350.6 10.9 L346.9 10.3 Z" />
+  <path id="zone-sleeve-left" data-label="Sleeve left" fill="#3d5a80"
+    d="M95.6 178.4 L75.9 201.3 L73.1 207 L60.9 217.3 L45 235.6 L32.8 253.3 L25.3 259.6 L28.1 266.5 L16.9 279.6 L16.9 281.9 L29.1 295.7 L37.5 299.7 L50.6 287.7 L62.8 284.8 L77.8 276.2 L86.3 268.8 L96.6 265.4 L96.6 179 Z" />
+  <path id="zone-sleeve-right" data-label="Sleeve right" fill="#3d5a80"
+    d="M504.4 176.1 L503.4 267.1 L530.6 281.9 L547.5 286.5 L561.6 298.5 L567.2 296.8 L570.9 293.9 L582.2 280.8 L571.9 267.6 L570.9 255.6 L562.5 248.2 L559.7 239 L555 234.5 L546.6 229.9 L537.2 219.6 L528.8 205.9 L515.6 194.4 L510 181.3 L505.3 176.7 Z" />
+  <rect id="print-area" x="168" y="117" width="264" height="146" fill="none" />
 </svg>

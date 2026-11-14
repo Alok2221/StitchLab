@@ -105,12 +105,15 @@ Preview shows this sheet as an image, and PNG / SVG export can save it instead
 of separate files. PNG sheets are scaled down when they would exceed the
 canvas size Chromium can encode.
 
-**3D preview** - `src/renderer/src/preview3d/` loads a CC0 GLB shell per garment
+**3D preview** - `src/renderer/src/preview3d/` loads a GLB shell per garment
 (`meshes/`, see `meshes/LICENSE.md`) and maps the flat design onto it with
-planar front/back UVs (`loadMesh.ts`). Hangers and hooks are stripped by
-material name. If a garment has no mesh, the older inflate path still builds a
-silhouette shell. Where front and back outlines differ, the other view is used
-as an underlay. The preview sits in the same canvas as the 2D editor, with
+planar front/back UVs (`loadMesh.ts`). Front vs back is split by depth so an
+open tote does not put the front print on the inner back wall. The flat design
+is warped into the mesh silhouette row-by-row and segment-by-segment
+(`textureFit.ts`) so handles stay on straps and the body print stays on the
+body; leftover holes are filled with the fabric colour. If a garment has no mesh, the older inflate path still
+builds a silhouette shell. Where front and back outlines differ, the other
+view is used as an underlay. The preview sits in the same canvas as the 2D editor, with
 orbit, zoom, studio lighting (studio, soft, outdoor) and cameras for the front,
 the back, the side and a three-quarter view. Three.js is loaded only when the
 3D mode is first opened. Save PNG renders the same camera off-screen at 1024,
@@ -182,13 +185,15 @@ A template is an SVG file with:
 - an optional `<rect id="print-area" fill="none">` marking the printable area.
 
 Views of one garment share the viewBox. In back views the left and right parts
-keep their ids but sit on the opposite side of the image. New templates are
-registered as garments in `src/renderer/src/templates/index.ts`; a view can
-also be derived from another one (`deriveView`), optionally mirrored left to
-right - the tote bag back repeats the front, and footwear inner sides mirror
-the outer side. The template tests check every view: unique ids, labeled
-zones, hex colors, drawable paths inside the viewBox, a print area inside the
-viewBox, and left / right parts swapping sides between front and back.
+keep their ids but sit on the opposite side of the image. Templates are projected from the GLB shells (`npm run templates:project` →
+`scripts/projectTemplates.mjs`): each part of the 3D mesh is orthographically
+outlined into SVG zones so the 2D editor matches the 3D preview. New garments
+are registered in `src/renderer/src/templates/index.ts`; a view can also be
+derived (`deriveView`), optionally mirrored — the tote bag back repeats the
+front, and footwear inner sides mirror the outer side. The template tests check
+every view: unique ids, labeled zones, hex colors, drawable paths inside the
+viewBox, a print area inside the viewBox, and left / right parts swapping sides
+between front and back.
 
 PixiJS runs with `pixi.js/unsafe-eval` so the renderer keeps a strict
 Content Security Policy without `'unsafe-eval'`.

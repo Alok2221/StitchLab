@@ -1,17 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 680" data-template-id="hoodie" data-view="back" data-view-label="Back" data-name="Hoodie" data-category="tops">
-  <path id="zone-sleeve-right" data-label="Right sleeve" fill="#3b3f4a"
-    d="M170 140 Q118 152 102 230 L62 560 L132 572 L172 330 Z" />
-  <path id="zone-sleeve-left" data-label="Left sleeve" fill="#3b3f4a"
-    d="M470 140 Q522 152 538 230 L578 560 L508 572 L468 330 Z" />
-  <path id="zone-cuff-right" data-label="Right cuff" fill="#2c2f37"
-    d="M62 560 L132 572 L128 612 L56 602 Z" />
-  <path id="zone-cuff-left" data-label="Left cuff" fill="#2c2f37"
-    d="M578 560 L508 572 L512 612 L584 602 Z" />
-  <path id="zone-body" data-label="Body" fill="#3b3f4a"
-    d="M226 120 L170 140 Q160 400 168 610 L472 610 Q480 400 470 140 L414 120 Z" />
-  <path id="zone-hood" data-label="Hood" fill="#3b3f4a"
-    d="M226 120 Q204 34 320 18 Q436 34 414 120 Q404 196 320 236 Q236 196 226 120 Z" />
-  <path id="zone-waistband" data-label="Waistband" fill="#2c2f37"
-    d="M168 610 L472 610 L470 660 L170 660 Z" />
-  <rect id="print-area" x="220" y="262" width="200" height="250" fill="none" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 366" data-template-id="hoodie" data-view="back" data-view-label="Back" data-name="Hoodie" data-category="tops">
+  <path id="zone-body" data-label="Body" fill="#3d5a80"
+    d="M251.3 10.3 L248.4 10.9 L244.7 14.3 L245.6 19.4 L243.8 21.2 L243.8 30.3 L247.5 37.2 L246.6 42.9 L248.4 45.8 L231.6 50.3 L181.9 71.5 L172.5 92.1 L160.3 109.2 L124.7 142.4 L104.1 169.3 L95.6 175.6 L95.6 265.4 L101.3 263.1 L106.9 257.9 L132.2 249.3 L139.7 244.8 L171.6 214.5 L183.8 195 L199.7 196.2 L196.9 232.8 L199.7 308.8 L195 316.8 L195 322.5 L198.8 332.3 L206.3 338.6 L211.9 339.7 L210.9 347.1 L215.6 349.4 L240 352.8 L278.4 355.1 L310.3 354.6 L366.6 347.7 L379.7 344.8 L385.3 340.3 L390 332.8 L390 328.3 L399.4 318.5 L399.4 312.8 L391.9 294.5 L396.6 270.5 L397.5 208.2 L399.4 195 L404.1 196.2 L414.4 207.6 L447.2 235.6 L486.6 259.1 L499.7 265.4 L504.4 265.4 L504.4 179 L494.1 163 L486.6 157.8 L474.4 153.8 L465 140.1 L454.7 130.4 L446.3 115.5 L419.1 82.9 L420.9 77.2 L417.2 71.5 L405 65.2 L394.7 62.9 L377.8 53.8 L367.5 50.3 L360 49.8 L351.6 46.3 L351.6 42.9 L358.1 36 L358.1 33.2 L342.2 28 L333.8 16.6 L331.9 16 L316.9 18.9 L307.5 25.7 L296.3 23.4 L285.9 17.2 L270 11.4 L252.2 10.3 Z" />
+  <path id="zone-sleeve-right" data-label="Sleeve right" fill="#3d5a80"
+    d="M95.6 175.6 L89.1 181.3 L83.4 194.4 L70.3 205.9 L63.8 217.3 L52.5 229.9 L40.3 237.9 L36.6 244.2 L36.6 248.2 L28.1 255.6 L27.2 267.6 L16.9 280.8 L22.5 288.8 L30.9 296.2 L37.5 298.5 L51.6 286.5 L68.4 281.9 L96.6 265.9 L96.6 176.1 Z" />
+  <path id="zone-sleeve-left" data-label="Sleeve left" fill="#3d5a80"
+    d="M504.4 180.1 L503.4 265.9 L512.8 268.8 L521.3 276.2 L536.3 284.8 L548.4 287.7 L561.6 299.7 L572.8 293.4 L582.2 281.9 L582.2 279.6 L570.9 266.5 L573.8 259.6 L566.3 253.3 L554.1 235.6 L538.1 217.3 L525.9 207 L523.1 201.3 L505.3 180.7 Z" />
+  <rect id="print-area" x="168" y="117" width="264" height="146" fill="none" />
 </svg>

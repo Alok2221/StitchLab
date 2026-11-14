@@ -158,6 +158,9 @@ export interface InflatedMesh {
   frontIndexCount: number
   /** Vertices `[0, vertexCount)` are the front, `[vertexCount, 2 * vertexCount)` the back. */
   vertexCount: number
+  /** Projected cloth mask in UV space, used to warp the 2D design onto a GLB shell. */
+  frontSilhouette?: { width: number; height: number; data: Uint8Array }
+  backSilhouette?: { width: number; height: number; data: Uint8Array }
 }
 
 const NEIGHBOR8 = [

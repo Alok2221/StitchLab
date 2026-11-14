@@ -1,15 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 780" data-template-id="dress" data-view="back" data-view-label="Back" data-name="Dress" data-category="dresses">
-  <path id="zone-strap-right" data-label="Right strap" fill="#7a2338"
-    d="M190 40 L214 40 L222 132 L196 132 Z" />
-  <path id="zone-strap-left" data-label="Left strap" fill="#7a2338"
-    d="M330 40 L306 40 L298 132 L324 132 Z" />
-  <path id="zone-skirt" data-label="Skirt" fill="#9b2c45"
-    d="M182 316 L338 316 Q420 520 470 720 Q260 750 50 720 Q100 520 182 316 Z" />
-  <path id="zone-bodice" data-label="Bodice" fill="#9b2c45"
-    d="M176 130 L222 130 Q260 250 298 130 L344 130 Q350 200 336 290 L184 290 Q170 200 176 130 Z" />
-  <path id="zone-belt" data-label="Belt" fill="#1f1f22"
-    d="M184 290 L336 290 L338 318 L182 318 Z" />
-  <path id="zone-hem" data-label="Hem" fill="#7a2338"
-    d="M50 720 Q260 750 470 720 L474 742 Q260 774 46 742 Z" />
-  <rect id="print-area" x="170" y="380" width="180" height="220" fill="none" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 223 600" data-template-id="dress" data-view="back" data-view-label="Back" data-name="Dress" data-category="dresses">
+  <path id="zone-yoke-front" data-label="Yoke front" fill="#b88888"
+    d="M77.7 63.8 L62.4 68.4 L60.3 72.2 L58.9 79.7 L59.6 103.1 L61.3 120 L68.3 154.7 L102.4 149.1 L124.4 149.1 L161 153.8 L168.3 116.3 L170 78.8 L167.9 69.4 L165.5 67.5 L154.4 63.8 L123.3 65.6 L78.1 63.8 Z" />
+  <path id="zone-yoke-back" data-label="Yoke back" fill="#a87070"
+    d="M170 78.8 L169 83.4 L165.5 85.3 L150.5 85.3 L131 89.1 L97.2 89.1 L78.1 85.3 L63.4 85.3 L59.6 83.4 L58.9 79.7 L58.2 84.4 L60.6 114.4 L67.9 154.7 L69.7 159.4 L73.2 163.1 L88.5 167.8 L139.4 167.8 L157.1 162.2 L161 155.6 L167.9 119.1 L171.1 81.6 L170.4 79.7 Z" />
+  <path id="zone-strap-left" data-label="Strap left" fill="#b88888"
+    d="M159.9 17.8 L155.4 26.3 L140.1 63.8 L149.8 65.6 L144.3 87.2 L158.9 86.3 L169.7 47.8 L171.1 38.4 L171.1 29.1 L173.5 22.5 L172.5 20.6 L160.3 17.8 Z" />
+  <path id="zone-strap-right" data-label="Strap right" fill="#b88888"
+    d="M60.3 16.9 L58.5 19.7 L56.1 19.7 L50.9 24.4 L51.9 28.1 L52.6 40.3 L54.7 50.6 L68.6 86.3 L83.3 86.3 L76 66.6 L77.7 64.7 L86.1 63.8 L68.6 27.2 L64.8 20.6 L60.6 17.8 Z" />
+  <path id="zone-body" data-label="Body" fill="#c9a0a0"
+    d="M102.4 148.1 L67.9 153.8 L64.5 163.1 L58.2 193.1 L51.9 216.6 L40.1 286.9 L30 360.9 L28.2 379.7 L26.8 385.3 L26.1 395.6 L21.3 424.7 L19.2 444.4 L6.3 519.4 L30.7 526.9 L29.6 541.9 L31 544.7 L36.2 548.4 L35.9 570.9 L38 573.8 L38 580.3 L48.4 582.2 L82.6 579.4 L82.6 575.6 L83.6 573.8 L101.7 570 L102.1 561.6 L104.5 553.1 L103.8 536.3 L107.7 534.4 L109.4 535.3 L108.7 552.2 L125.1 558.8 L126.8 562.5 L126.8 571.9 L155.1 570.9 L173.5 573.8 L175.3 574.7 L176 579.4 L207.3 576.6 L209.4 571.9 L208.4 551.3 L210.8 547.5 L209.1 524.1 L216.4 519.4 L202.4 423.8 L183.6 255.9 L177 215.6 L163.4 159.4 L161 152.8 L124.4 148.1 L102.8 148.1 Z" />
+  <rect id="print-area" x="62" y="192" width="98" height="240" fill="none" />
 </svg>
